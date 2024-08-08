@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"strings"
 	"time"
-	
+
 	"github.com/go-puzzles/plog"
-	"github.com/go-puzzles/plog/slog"
+	"github.com/go-puzzles/plog/log"
 )
 
 const (
@@ -20,8 +20,8 @@ const (
 	magenta = "\033[97;45m"
 	cyan    = "\033[97;46m"
 	reset   = "\033[0m"
-	
-	logMsg = "| %s %v %s | %13v | %15s | %s %4v %s| %#v"
+
+	logMsg = "statusCode=%v duration=%v clientIp=%s method=%s path=%s"
 )
 
 type LogMiddleware struct {
@@ -38,7 +38,7 @@ func WithLogger(l plog.Logger) LogOption {
 
 func NewLogMiddleware() *LogMiddleware {
 	return &LogMiddleware{
-		logger: slog.New(),
+		logger: log.New(),
 	}
 }
 
@@ -55,58 +55,51 @@ func (lm *LogMiddleware) ClientIP(r *http.Request) string {
 	if remoteIP == nil {
 		return ""
 	}
-	
+
 	return remoteIP.String()
 }
 
-func (lm *LogMiddleware) log(start time.Time, statusCode int, r *http.Request) {
+func (lm *LogMiddleware) log(ctx context.Context, start time.Time, statusCode int, r *http.Request) {
 	path := r.URL.Path
 	raw := r.URL.RawQuery
-	
+
 	clientIp := lm.ClientIP(r)
 	method := r.Method
 	if raw != "" {
 		path = path + "?" + raw
 	}
-	
+
 	spendTime := time.Since(start)
-	
-	var logFunc func(msg string, v ...any)
+
+	var logFunc func(ctx context.Context, msg string, v ...any)
 	switch {
 	case statusCode >= http.StatusOK && statusCode < http.StatusMultipleChoices:
-		logFunc = lm.logger.Infof
+		logFunc = lm.logger.Infoc
 	case statusCode >= http.StatusMultipleChoices && statusCode < http.StatusBadRequest:
-		logFunc = lm.logger.Warnf
+		logFunc = lm.logger.Warnc
 	case statusCode >= http.StatusBadRequest && statusCode <= http.StatusNetworkAuthenticationRequired:
-		logFunc = lm.logger.Errorf
+		logFunc = lm.logger.Errorc
 	default:
-		logFunc = lm.logger.Errorf
+		logFunc = lm.logger.Errorc
 	}
-	
-	var statusColor, mthColor, resetColor string
-	statusColor = statusCodeColor(statusCode)
-	mthColor = methodColor(method)
-	resetColor = reset
-	
-	logFunc(
-		logMsg,
-		statusColor, statusCode, resetColor,
-		spendTime,
-		clientIp,
-		mthColor, method, resetColor,
-		path,
-	)
+
+	status := "success"
+	if statusCode != http.StatusOK {
+		status = "failed"
+	}
+
+	logFunc(ctx, "handle route %v.", status, "statusCode", statusCode, "duration", spendTime, "clientIp", clientIp, "method", method, "path", path)
 }
 
 func (lm *LogMiddleware) WrapHandler(handler HandleFunc) HandleFunc {
 	return func(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) Response {
 		rw := WrapResponseWriter(w)
-		
+
 		start := time.Now()
 		defer func() {
-			lm.log(start, rw.StatusCode(), r)
+			lm.log(ctx, start, rw.StatusCode(), r)
 		}()
-		
+
 		return handler(ctx, rw, r, vars)
 	}
 }
