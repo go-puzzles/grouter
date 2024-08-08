@@ -174,9 +174,6 @@ func (v *Prouter) makeHttpHandler(wr iRoute) http.HandlerFunc {
 			return
 		}
 
-		if resp.GetError() != nil {
-			plog.Errorc(ctx, "handle error", "err", resp.GetError())
-		}
 		_ = WriteJSON(w, resp.GetCode(), resp.GetData())
 	}
 }
