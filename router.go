@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	
+
 	"github.com/go-puzzles/plog"
 	"github.com/gorilla/mux"
 )
@@ -70,7 +70,7 @@ func (v *Prouter) parseOptions(opts ...RouterOption) {
 	if v.host != "" {
 		v.router = v.router.Host(v.host).Subrouter()
 	}
-	
+
 	if v.scheme != "" {
 		v.router = v.router.Schemes(v.host).Subrouter()
 	}
@@ -78,7 +78,7 @@ func (v *Prouter) parseOptions(opts ...RouterOption) {
 
 func New(opts ...RouterOption) *Prouter {
 	m := mux.NewRouter()
-	
+
 	v := &Prouter{
 		RouterGroup: newGroupWithRouter(m),
 		middlewares: make([]Middleware, 0),
@@ -86,14 +86,14 @@ func New(opts ...RouterOption) *Prouter {
 	v.RouterGroup.root = true
 	v.RouterGroup.prouter = v
 	v.parseOptions(opts...)
-	
+
 	return v
 }
 
 func NewProuter(opts ...RouterOption) *Prouter {
 	v := New(opts...)
 	v.UseMiddleware(NewLogMiddleware())
-	
+
 	notFoundHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_ = WriteJSON(w, http.StatusNotFound, ErrorResponse(http.StatusNotFound, "page not found"))
 	})
@@ -119,16 +119,16 @@ func (v *Prouter) Run(addr string) error {
 
 func (v *Prouter) initRouter(r iRoute) {
 	f := v.makeHttpHandler(r)
-	
+
 	vr := r.router.Path(r.Path())
 	if r.Method() != "" {
 		vr = vr.Methods(r.Method())
 	}
-	
+
 	if r.routeOption != nil {
 		vr = r.routeOption(vr)
 	}
-	
+
 	mr := vr.Handler(f)
 	v.debugPrintRoute(r.Method(), mr, r.Handler())
 }
@@ -142,38 +142,38 @@ func (v *Prouter) handleGlobalMiddleware(handler HandleFunc) HandleFunc {
 	for _, m := range v.middlewares {
 		h = m.WrapHandler(h)
 	}
-	
+
 	return h
 }
 
 func (v *Prouter) handelrName(handler HandleFunc) string {
 	funcName := plog.GetFuncName(handler)
 	fs := strings.Split(funcName, ".")
-	
+
 	return fs[len(fs)-1]
 }
 
 func (v *Prouter) makeHttpHandler(wr iRoute) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		
+
 		ctx := plog.With(context.Background(), "handler", v.handelrName(wr.Handler()))
 		r = r.WithContext(ctx)
-		
+
 		// TODO: parse body data
-		
+
 		vars := mux.Vars(r)
 		if vars == nil {
 			vars = make(map[string]string)
 		}
-		
+
 		handlerFunc := v.handleGlobalMiddleware(wr.Handler())
 		handlerFunc = wr.handleSpecifyMiddleware(handlerFunc)
-		
+
 		resp := handlerFunc(ctx, w, r, vars)
 		if resp == nil {
 			return
 		}
-		
+
 		if resp.GetError() != nil {
 			plog.Errorc(ctx, "handle error", "err", resp.GetError())
 		}
@@ -188,11 +188,11 @@ func (v *Prouter) debugPrintRoute(method string, route *mux.Route, handler Handl
 	if method == "" {
 		method = "ANY"
 	}
-	
+
 	handlerName := v.handelrName(handler)
 	url, err := route.GetPathTemplate()
 	if err != nil {
 		plog.Errorf("get handler: %v iRoute url error: %v", handlerName, err)
 	}
-	plog.Infof("Method=%-6s Router=%-26s Handler=%s", method, url, handlerName)
+	plog.Infof("Method: %-6s Router: %-26s Handler: %s", method, url, handlerName)
 }
