@@ -30,6 +30,25 @@ func testMiddleware(ctx context.Context, w http.ResponseWriter, r *http.Request,
 	return nil, nil
 }
 
+type Data struct {
+	Name string `json:"name"`
+}
+
+type Resp struct {
+	Data string `json:"data"`
+}
+
+func bodyParseTestHandler(ctx context.Context, data *Data) (*string, error) {
+	fmt.Println("data", data)
+
+	var resp *string
+	resp = new(string)
+	*resp = fmt.Sprintf("Hello, %s!", data.Name)
+	return resp, nil
+
+	// return &Resp{Data: fmt.Sprintf("Hello, %s!", data.Name)}, nil
+}
+
 func main() {
 	prouter.SetMode(prouter.DebugMode)
 	router := prouter.NewProuter()
@@ -37,6 +56,7 @@ func main() {
 	router.HandleRoute(http.MethodGet, "/hello/{name}", helloHandler, func(route *mux.Route) *mux.Route {
 		return route.Headers("Content-Type", "application/json", "X-Requested-With", "XMLHttpRequest")
 	})
+	router.POST("/hello/parse", prouter.NewBodyParseHandler(bodyParseTestHandler))
 	router.HandlerRouter(myRouters)
 	router.Static("/static", "./content")
 

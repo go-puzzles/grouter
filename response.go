@@ -40,7 +40,7 @@ func (r *Ret) GetCode() int {
 }
 
 func (r *Ret) GetData() any {
-	return r
+	return r.Data
 }
 
 func (r *Ret) GetMessage() string {
