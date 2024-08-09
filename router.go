@@ -92,7 +92,10 @@ func New(opts ...RouterOption) *Prouter {
 
 func NewProuter(opts ...RouterOption) *Prouter {
 	v := New(opts...)
-	v.UseMiddleware(NewLogMiddleware())
+	v.UseMiddleware(
+		NewRecoveryMiddleware(),
+		NewLogMiddleware(),
+	)
 
 	notFoundHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_ = WriteJSON(w, http.StatusNotFound, ErrorResponse(http.StatusNotFound, "page not found"))
@@ -155,11 +158,8 @@ func (v *Prouter) handelrName(handler HandleFunc) string {
 
 func (v *Prouter) makeHttpHandler(wr iRoute) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
 		ctx := plog.With(context.Background(), "handler", v.handelrName(wr.Handler()))
 		r = r.WithContext(ctx)
-
-		// TODO: parse body data
 
 		vars := mux.Vars(r)
 		if vars == nil {
@@ -169,13 +169,52 @@ func (v *Prouter) makeHttpHandler(wr iRoute) http.HandlerFunc {
 		handlerFunc := v.handleGlobalMiddleware(wr.Handler())
 		handlerFunc = wr.handleSpecifyMiddleware(handlerFunc)
 
-		resp := handlerFunc(ctx, w, r, vars)
+		status, resp := v.packResponseTmpl(handlerFunc(ctx, w, r, vars))
+
+		_ = WriteJSON(w, status, resp)
+	}
+}
+
+func (v *Prouter) packResponseTmpl(resp Response, err error) (status int, ret ResponseTmpl) {
+	var (
+		code int
+		data any
+		msg  string
+	)
+
+	data = func() any {
 		if resp == nil {
-			return
+			return nil
 		}
 
-		_ = WriteJSON(w, resp.GetCode(), resp.GetData())
+		return resp.GetData()
+	}()
+
+	code = func() int {
+		if resp == nil {
+			return 200
+		}
+		return resp.GetCode()
+	}()
+
+	if err != nil {
+		if resp == nil || resp.GetMessage() == "" {
+			msg = err.Error()
+		} else {
+			msg = resp.GetMessage()
+		}
+
+		if code == 0 || code == 200 {
+			code = http.StatusInternalServerError
+		}
 	}
+
+	ret = NewResponseTmpl()
+	ret.SetCode(code)
+	ret.SetMessage(msg)
+	ret.SetData(data)
+
+	return code, ret
 }
 
 func (v *Prouter) debugPrintRoute(method string, route *mux.Route, handler HandleFunc) {

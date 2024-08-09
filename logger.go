@@ -2,6 +2,7 @@ package prouter
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"net/http"
 	"strings"
@@ -59,8 +60,7 @@ func (lm *LogMiddleware) ClientIP(r *http.Request) string {
 	return remoteIP.String()
 }
 
-func (lm *LogMiddleware) log(ctx context.Context, r *http.Request, rw *ResponseWriter, resp Response, start time.Time) {
-	err := resp.GetError()
+func (lm *LogMiddleware) log(ctx context.Context, r *http.Request, rw *ResponseWriter, resp Response, err error, start time.Time) {
 	if err != nil && rw.StatusCode() == http.StatusOK {
 		rw.WriteHeader(http.StatusInternalServerError)
 	}
@@ -104,27 +104,31 @@ func (lm *LogMiddleware) log(ctx context.Context, r *http.Request, rw *ResponseW
 
 	if err != nil {
 		args = append(args, "err", err)
-		args = append(args, "errMsg", resp.GetMessage())
+		if resp != nil {
+			args = append(args, "errMsg", resp.GetMessage())
+		}
 	}
 
 	logFunc(ctx, "handle route %v.", args...)
 }
 
 func (lm *LogMiddleware) WrapHandler(handler HandleFunc) HandleFunc {
-	return func(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) Response {
+	return func(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (Response, error) {
+		fmt.Println("into log middleware")
 		rw := WrapResponseWriter(w)
 
 		var (
 			resp Response
+			err  error
 		)
 		start := time.Now()
 		defer func() {
-			lm.log(ctx, r, rw, resp, start)
+			lm.log(ctx, r, rw, resp, err, start)
 		}()
 
-		resp = handler(ctx, rw, r, vars)
+		resp, err = handler(ctx, rw, r, vars)
 
-		return resp
+		return resp, err
 	}
 }
 

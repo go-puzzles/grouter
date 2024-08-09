@@ -1,23 +1,42 @@
 package prouter
 
 import (
-	"errors"
 	"net/http"
+	"reflect"
 )
+
+var (
+	responseTmpl reflect.Type = reflect.TypeOf((*Ret)(nil)).Elem()
+)
+
+func SetResponseTmpl(tmpl ResponseTmpl) {
+	responseTmpl = reflect.TypeOf(tmpl).Elem()
+}
+
+func NewResponseTmpl() ResponseTmpl {
+	return reflect.New(responseTmpl).Interface().(ResponseTmpl)
+}
 
 type Ret struct {
 	Code    int    `json:"code"`
 	Data    any    `json:"data,omitempty"`
 	Message string `json:"message,omitempty"`
-	Err     error  `json:"-"`
+}
+
+func (r *Ret) SetCode(code int) {
+	r.Code = code
+}
+
+func (r *Ret) SetMessage(msg string) {
+	r.Message = msg
+}
+
+func (r *Ret) SetData(data any) {
+	r.Data = data
 }
 
 func (r *Ret) GetCode() int {
 	return r.Code
-}
-
-func (r *Ret) GetError() error {
-	return r.Err
 }
 
 func (r *Ret) GetData() any {
@@ -39,6 +58,5 @@ func ErrorResponse(code int, message string) *Ret {
 	return &Ret{
 		Code:    code,
 		Message: message,
-		Err:     errors.New(message),
 	}
 }

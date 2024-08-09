@@ -20,13 +20,14 @@ var (
 	myRouters = routers{prouter.NewRoute(http.MethodGet, "/test", helloHandler)}
 )
 
-func helloHandler(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) prouter.Response {
-	return prouter.SuccessResponse("hello world")
+func helloHandler(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (prouter.Response, error) {
+	panic("test err")
+	// return prouter.SuccessResponse("hello world"), nil
 }
 
-func testMiddleware(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) prouter.Response {
+func testMiddleware(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (prouter.Response, error) {
 	fmt.Println(111)
-	return nil
+	return nil, nil
 }
 
 func main() {

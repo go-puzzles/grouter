@@ -3,13 +3,19 @@ package prouter
 import (
 	"context"
 	"net/http"
-	
+
 	"github.com/gorilla/mux"
 )
 
 const (
 	statusCodeKey = "prouter-status-key"
 )
+
+type ResponseTmpl interface {
+	SetCode(int)
+	SetData(any)
+	SetMessage(string)
+}
 
 // iRoute the final iRoute group which will use to register into mux.Router
 type iRoute struct {
@@ -26,7 +32,7 @@ func (r *iRoute) handleSpecifyMiddleware(handler HandleFunc) HandleFunc {
 	for _, m := range r.middleware {
 		next = m.WrapHandler(next)
 	}
-	
+
 	return next
 }
 
@@ -34,10 +40,9 @@ type Response interface {
 	GetCode() int
 	GetMessage() string
 	GetData() any
-	GetError() error
 }
 
-type HandleFunc func(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) Response
+type HandleFunc func(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (Response, error)
 
 type Router interface {
 	Routes() []Route
@@ -59,10 +64,12 @@ type Middleware interface {
 }
 
 func (f HandleFunc) WrapHandler(handler HandleFunc) HandleFunc {
-	return func(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) Response {
-		if resp := f(ctx, w, r, vars); resp != nil && resp.GetError() != nil {
-			return resp
+	return func(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (Response, error) {
+		resp, err := f(ctx, w, r, vars)
+		if err != nil {
+			return resp, err
 		}
+
 		return handler(ctx, w, r, vars)
 	}
 }
@@ -91,7 +98,7 @@ func (r *defaultRoute) Option(route *mux.Route) *mux.Route {
 	for _, opt := range r.opts {
 		next = opt(next)
 	}
-	
+
 	return next
 }
 

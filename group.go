@@ -2,11 +2,12 @@ package prouter
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/url"
 	"path"
 	"strings"
-	
+
 	"github.com/gorilla/mux"
 )
 
@@ -41,7 +42,7 @@ func (rg *RouterGroup) HandlerRouter(routers ...Router) {
 				opt = tr.Option
 			default:
 			}
-			
+
 			rg.prouter.initRouter(iRoute{
 				Route:       r,
 				router:      rg.router,
@@ -50,7 +51,7 @@ func (rg *RouterGroup) HandlerRouter(routers ...Router) {
 			})
 		}
 	}
-	
+
 	for _, router := range routers {
 		wrapRoutes(router.Routes())
 	}
@@ -58,19 +59,19 @@ func (rg *RouterGroup) HandlerRouter(routers ...Router) {
 
 func (rg *RouterGroup) HandleRoute(method, path string, handler HandleFunc, opts ...RouteOption) {
 	routeOpt := func(r *mux.Route) *mux.Route {
-		
+
 		if opts == nil {
 			return r
 		}
-		
+
 		next := r
 		for _, opt := range opts {
 			next = opt(next)
 		}
-		
+
 		return next
 	}
-	
+
 	r := iRoute{
 		Route:       NewRoute(method, path, handler),
 		router:      rg.router,
@@ -79,7 +80,7 @@ func (rg *RouterGroup) HandleRoute(method, path string, handler HandleFunc, opts
 	if !rg.root {
 		r.middleware = rg.middlewares
 	}
-	
+
 	rg.prouter.initRouter(r)
 }
 
@@ -91,10 +92,10 @@ func (rg *RouterGroup) Group(prefix string) *RouterGroup {
 }
 
 func (rg *RouterGroup) staticHandler(prefix string, fs http.FileSystem) HandleFunc {
-	return func(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) Response {
+	return func(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (Response, error) {
 		p := strings.TrimPrefix(r.URL.Path, prefix)
 		rp := strings.TrimPrefix(r.URL.RawPath, prefix)
-		
+
 		if len(p) < len(r.URL.Path) && (r.URL.RawPath == "" || len(rp) < len(r.URL.RawPath)) {
 			r2 := new(http.Request)
 			*r2 = *r
@@ -104,9 +105,9 @@ func (rg *RouterGroup) staticHandler(prefix string, fs http.FileSystem) HandleFu
 			r2.URL.RawPath = rp
 			http.FileServer(fs).ServeHTTP(w, r2)
 		} else {
-			return ErrorResponse(http.StatusNotFound, "page not found")
+			return ErrorResponse(http.StatusNotFound, "page not found"), errors.New("page not found")
 		}
-		return nil
+		return nil, nil
 	}
 }
 
