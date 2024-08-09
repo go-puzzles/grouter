@@ -2,7 +2,6 @@ package prouter
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"net/http"
 	"strings"
@@ -114,7 +113,6 @@ func (lm *LogMiddleware) log(ctx context.Context, r *http.Request, rw *ResponseW
 
 func (lm *LogMiddleware) WrapHandler(handler HandleFunc) HandleFunc {
 	return func(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (Response, error) {
-		fmt.Println("into log middleware")
 		rw := WrapResponseWriter(w)
 
 		var (

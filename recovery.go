@@ -95,8 +95,6 @@ func function(pc uintptr) []byte {
 
 func (m *RecoveryMiddleware) WrapHandler(handler HandleFunc) HandleFunc {
 	return func(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (resp Response, err error) {
-		fmt.Println("into recovery middleware")
-
 		defer func() {
 			if recoverErr := recover(); recoverErr != nil {
 				// Check for a broken connection, as it is not really a
