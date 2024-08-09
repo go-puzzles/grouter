@@ -57,7 +57,7 @@ func (rg *RouterGroup) HandlerRouter(routers ...Router) {
 	}
 }
 
-func (rg *RouterGroup) HandleRoute(method, path string, handler HandleFunc, opts ...RouteOption) {
+func (rg *RouterGroup) HandleRoute(method, path string, handler handlerFunc, opts ...RouteOption) {
 	routeOpt := func(r *mux.Route) *mux.Route {
 
 		if opts == nil {
@@ -91,8 +91,8 @@ func (rg *RouterGroup) Group(prefix string) *RouterGroup {
 	return &g
 }
 
-func (rg *RouterGroup) staticHandler(prefix string, fs http.FileSystem) HandleFunc {
-	return func(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (Response, error) {
+func (rg *RouterGroup) staticHandler(prefix string, fs http.FileSystem) handlerFunc {
+	return HandleFunc(func(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (Response, error) {
 		p := strings.TrimPrefix(r.URL.Path, prefix)
 		rp := strings.TrimPrefix(r.URL.RawPath, prefix)
 
@@ -108,7 +108,7 @@ func (rg *RouterGroup) staticHandler(prefix string, fs http.FileSystem) HandleFu
 			return ErrorResponse(http.StatusNotFound, "page not found"), errors.New("page not found")
 		}
 		return nil, nil
-	}
+	})
 }
 
 func (rg *RouterGroup) Static(path, root string, opts ...RouteOption) {
@@ -121,38 +121,38 @@ func (rg *RouterGroup) StaticFS(relativePath string, fs http.FileSystem, opts ..
 	rg.GET(urlPattern, handler, opts...)
 }
 
-func (rg *RouterGroup) GET(path string, handler HandleFunc, opt ...RouteOption) {
+func (rg *RouterGroup) GET(path string, handler handlerFunc, opt ...RouteOption) {
 	rg.HandleRoute(http.MethodGet, path, handler, opt...)
 }
 
-func (rg *RouterGroup) POST(path string, handler HandleFunc, opt ...RouteOption) {
+func (rg *RouterGroup) POST(path string, handler handlerFunc, opt ...RouteOption) {
 	rg.HandleRoute(http.MethodPost, path, handler, opt...)
 }
 
-func (rg *RouterGroup) PUT(path string, handler HandleFunc, opts ...RouteOption) {
+func (rg *RouterGroup) PUT(path string, handler handlerFunc, opts ...RouteOption) {
 	rg.HandleRoute(http.MethodPut, path, handler, opts...)
 }
 
-func (rg *RouterGroup) PATCH(path string, handler HandleFunc, opts ...RouteOption) {
+func (rg *RouterGroup) PATCH(path string, handler handlerFunc, opts ...RouteOption) {
 	rg.HandleRoute(http.MethodPatch, path, handler, opts...)
 }
 
-func (rg *RouterGroup) DELETE(path string, handler HandleFunc, opts ...RouteOption) {
+func (rg *RouterGroup) DELETE(path string, handler handlerFunc, opts ...RouteOption) {
 	rg.HandleRoute(http.MethodDelete, path, handler, opts...)
 }
 
-func (rg *RouterGroup) OPTIONS(path string, handler HandleFunc, opts ...RouteOption) {
+func (rg *RouterGroup) OPTIONS(path string, handler handlerFunc, opts ...RouteOption) {
 	rg.HandleRoute(http.MethodOptions, path, handler, opts...)
 }
 
-func (rg *RouterGroup) HEAD(path string, handler HandleFunc, opts ...RouteOption) {
+func (rg *RouterGroup) HEAD(path string, handler handlerFunc, opts ...RouteOption) {
 	rg.HandleRoute(http.MethodHead, path, handler, opts...)
 }
 
-func (rg *RouterGroup) TRACE(path string, handler HandleFunc, opts ...RouteOption) {
+func (rg *RouterGroup) TRACE(path string, handler handlerFunc, opts ...RouteOption) {
 	rg.HandleRoute(http.MethodTrace, path, handler, opts...)
 }
 
-func (rg *RouterGroup) Any(path string, handler HandleFunc, opts ...RouteOption) {
+func (rg *RouterGroup) Any(path string, handler handlerFunc, opts ...RouteOption) {
 	rg.HandleRoute("", path, handler, opts...)
 }

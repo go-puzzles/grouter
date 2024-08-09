@@ -17,7 +17,7 @@ func (r routers) Routes() []prouter.Route {
 }
 
 var (
-	myRouters = routers{prouter.NewRoute(http.MethodGet, "/test", helloHandler)}
+	myRouters = routers{prouter.NewRoute(http.MethodGet, "/test", prouter.HandleFunc(helloHandler))}
 )
 
 func helloHandler(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (prouter.Response, error) {
@@ -53,16 +53,16 @@ func main() {
 	prouter.SetMode(prouter.DebugMode)
 	router := prouter.NewProuter()
 
-	router.HandleRoute(http.MethodGet, "/hello/{name}", helloHandler, func(route *mux.Route) *mux.Route {
+	router.HandleRoute(http.MethodGet, "/hello/{name}", prouter.HandleFunc(helloHandler), func(route *mux.Route) *mux.Route {
 		return route.Headers("Content-Type", "application/json", "X-Requested-With", "XMLHttpRequest")
 	})
-	router.POST("/hello/parse", prouter.NewBodyParseHandler(bodyParseTestHandler))
+	router.POST("/hello/parse", prouter.BodyParserHandleFunc(bodyParseTestHandler))
 	router.HandlerRouter(myRouters)
 	router.Static("/static", "./content")
 
 	group := router.Group("/group1")
 	group.UseMiddleware(prouter.HandleFunc(testMiddleware))
-	group.HandleRoute(http.MethodGet, "/hello2/{name}", helloHandler)
+	group.HandleRoute(http.MethodGet, "/hello2/{name}", prouter.HandleFunc(helloHandler))
 
 	srv := http.Server{
 		Addr:    ":8080",

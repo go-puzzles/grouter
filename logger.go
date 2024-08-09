@@ -111,8 +111,8 @@ func (lm *LogMiddleware) log(ctx context.Context, r *http.Request, rw *ResponseW
 	logFunc(ctx, "handle route %v.", args...)
 }
 
-func (lm *LogMiddleware) WrapHandler(handler HandleFunc) HandleFunc {
-	return func(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (Response, error) {
+func (lm *LogMiddleware) WrapHandler(handler handlerFunc) handlerFunc {
+	return HandleFunc(func(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (Response, error) {
 		rw := WrapResponseWriter(w)
 
 		var (
@@ -124,43 +124,8 @@ func (lm *LogMiddleware) WrapHandler(handler HandleFunc) HandleFunc {
 			lm.log(ctx, r, rw, resp, err, start)
 		}()
 
-		resp, err = handler(ctx, rw, r, vars)
+		resp, err = handler.Handle(ctx, rw, r, vars)
 
 		return resp, err
-	}
-}
-
-func statusCodeColor(code int) string {
-	switch {
-	case code >= http.StatusOK && code < http.StatusMultipleChoices:
-		return green
-	case code >= http.StatusMultipleChoices && code < http.StatusBadRequest:
-		return white
-	case code >= http.StatusBadRequest && code < http.StatusInternalServerError:
-		return yellow
-	default:
-		return red
-	}
-}
-
-// MethodColor is the ANSI color for appropriately logging http method to a terminal.
-func methodColor(method string) string {
-	switch method {
-	case http.MethodGet:
-		return blue
-	case http.MethodPost:
-		return cyan
-	case http.MethodPut:
-		return yellow
-	case http.MethodDelete:
-		return red
-	case http.MethodPatch:
-		return green
-	case http.MethodHead:
-		return magenta
-	case http.MethodOptions:
-		return white
-	default:
-		return reset
-	}
+	})
 }

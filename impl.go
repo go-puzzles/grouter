@@ -27,7 +27,7 @@ type iRoute struct {
 
 type RouteOption func(*mux.Route) *mux.Route
 
-func (r *iRoute) handleSpecifyMiddleware(handler HandleFunc) HandleFunc {
+func (r *iRoute) handleSpecifyMiddleware(handler handlerFunc) handlerFunc {
 	next := handler
 	for _, m := range r.middleware {
 		next = m.WrapHandler(next)
@@ -42,14 +42,17 @@ type Response interface {
 	GetData() any
 }
 
-type HandleFunc func(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (Response, error)
+type handlerFunc interface {
+	Name() string
+	Handle(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (Response, error)
+}
 
 type Router interface {
 	Routes() []Route
 }
 
 type Route interface {
-	Handler() HandleFunc
+	Handler() handlerFunc
 	Path() string
 	Method() string
 }
@@ -60,28 +63,28 @@ type OptRoute interface {
 }
 
 type Middleware interface {
-	WrapHandler(handler HandleFunc) HandleFunc
+	WrapHandler(handler handlerFunc) handlerFunc
 }
 
-func (f HandleFunc) WrapHandler(handler HandleFunc) HandleFunc {
-	return func(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (Response, error) {
+func (f HandleFunc) WrapHandler(handler handlerFunc) handlerFunc {
+	return HandleFunc(func(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (Response, error) {
 		resp, err := f(ctx, w, r, vars)
 		if err != nil {
 			return resp, err
 		}
 
-		return handler(ctx, w, r, vars)
-	}
+		return handler.Handle(ctx, w, r, vars)
+	})
 }
 
 type defaultRoute struct {
 	method  string
 	path    string
-	handler HandleFunc
+	handler handlerFunc
 	opts    []RouteOption
 }
 
-func (r *defaultRoute) Handler() HandleFunc {
+func (r *defaultRoute) Handler() handlerFunc {
 	return r.handler
 }
 
@@ -102,38 +105,38 @@ func (r *defaultRoute) Option(route *mux.Route) *mux.Route {
 	return next
 }
 
-func NewRoute(method, path string, handler HandleFunc, opts ...RouteOption) Route {
+func NewRoute(method, path string, handler handlerFunc, opts ...RouteOption) Route {
 	return &defaultRoute{method, path, handler, opts}
 }
 
-func NewGetRoute(path string, handler HandleFunc, opts ...RouteOption) Route {
+func NewGetRoute(path string, handler handlerFunc, opts ...RouteOption) Route {
 	return NewRoute(http.MethodGet, path, handler, opts...)
 }
 
-func NewPostRoute(path string, handler HandleFunc, opts ...RouteOption) Route {
+func NewPostRoute(path string, handler handlerFunc, opts ...RouteOption) Route {
 	return NewRoute(http.MethodPost, path, handler, opts...)
 }
 
-func NewPutRoute(path string, handler HandleFunc, opts ...RouteOption) Route {
+func NewPutRoute(path string, handler handlerFunc, opts ...RouteOption) Route {
 	return NewRoute(http.MethodPut, path, handler, opts...)
 }
 
-func NewDeleteRoute(path string, handler HandleFunc, opts ...RouteOption) Route {
+func NewDeleteRoute(path string, handler handlerFunc, opts ...RouteOption) Route {
 	return NewRoute(http.MethodDelete, path, handler, opts...)
 }
 
-func NewOptionsRoute(path string, handler HandleFunc, opts ...RouteOption) Route {
+func NewOptionsRoute(path string, handler handlerFunc, opts ...RouteOption) Route {
 	return NewRoute(http.MethodOptions, path, handler, opts...)
 }
 
-func NewHeadRoute(path string, handler HandleFunc, opts ...RouteOption) Route {
+func NewHeadRoute(path string, handler handlerFunc, opts ...RouteOption) Route {
 	return NewRoute(http.MethodHead, path, handler, opts...)
 }
 
-func NewPatchRoute(path string, handler HandleFunc, opts ...RouteOption) Route {
+func NewPatchRoute(path string, handler handlerFunc, opts ...RouteOption) Route {
 	return NewRoute(http.MethodPatch, path, handler, opts...)
 }
 
-func NewAnyRoute(path string, handler HandleFunc, opts ...RouteOption) Route {
+func NewAnyRoute(path string, handler handlerFunc, opts ...RouteOption) Route {
 	return NewRoute("", path, handler, opts...)
 }

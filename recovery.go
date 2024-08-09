@@ -93,8 +93,8 @@ func function(pc uintptr) []byte {
 	return name
 }
 
-func (m *RecoveryMiddleware) WrapHandler(handler HandleFunc) HandleFunc {
-	return func(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (resp Response, err error) {
+func (m *RecoveryMiddleware) WrapHandler(handler handlerFunc) handlerFunc {
+	return HandleFunc(func(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (resp Response, err error) {
 		defer func() {
 			if recoverErr := recover(); recoverErr != nil {
 				// Check for a broken connection, as it is not really a
@@ -133,7 +133,7 @@ func (m *RecoveryMiddleware) WrapHandler(handler HandleFunc) HandleFunc {
 			}
 		}()
 
-		resp, err = handler(ctx, w, r, vars)
+		resp, err = handler.Handle(ctx, w, r, vars)
 		return
-	}
+	})
 }

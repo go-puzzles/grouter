@@ -140,7 +140,7 @@ func (v *Prouter) UseMiddleware(m ...Middleware) {
 	v.middlewares = append(v.middlewares, m...)
 }
 
-func (v *Prouter) handleGlobalMiddleware(handler HandleFunc) HandleFunc {
+func (v *Prouter) handleGlobalMiddleware(handler handlerFunc) handlerFunc {
 	h := handler
 	for _, m := range v.middlewares {
 		h = m.WrapHandler(h)
@@ -149,7 +149,7 @@ func (v *Prouter) handleGlobalMiddleware(handler HandleFunc) HandleFunc {
 	return h
 }
 
-func (v *Prouter) handelrName(handler HandleFunc) string {
+func (v *Prouter) handelrName(handler handlerFunc) string {
 	funcName := plog.GetFuncName(handler)
 	fs := strings.Split(funcName, ".")
 
@@ -158,7 +158,7 @@ func (v *Prouter) handelrName(handler HandleFunc) string {
 
 func (v *Prouter) makeHttpHandler(wr iRoute) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ctx := plog.With(context.Background(), "handler", v.handelrName(wr.Handler()))
+		ctx := plog.With(context.Background(), "handler", wr.Handler().Name())
 		r = r.WithContext(ctx)
 
 		vars := mux.Vars(r)
@@ -169,7 +169,7 @@ func (v *Prouter) makeHttpHandler(wr iRoute) http.HandlerFunc {
 		handlerFunc := v.handleGlobalMiddleware(wr.Handler())
 		handlerFunc = wr.handleSpecifyMiddleware(handlerFunc)
 
-		status, resp := v.packResponseTmpl(handlerFunc(ctx, w, r, vars))
+		status, resp := v.packResponseTmpl(handlerFunc.Handle(ctx, w, r, vars))
 
 		_ = WriteJSON(w, status, resp)
 	}
@@ -217,7 +217,7 @@ func (v *Prouter) packResponseTmpl(resp Response, err error) (status int, ret Re
 	return code, ret
 }
 
-func (v *Prouter) debugPrintRoute(method string, route *mux.Route, handler HandleFunc) {
+func (v *Prouter) debugPrintRoute(method string, route *mux.Route, handler handlerFunc) {
 	if prouterMode != DebugMode {
 		return
 	}
@@ -225,7 +225,7 @@ func (v *Prouter) debugPrintRoute(method string, route *mux.Route, handler Handl
 		method = "ANY"
 	}
 
-	handlerName := v.handelrName(handler)
+	handlerName := handler.Name()
 	url, err := route.GetPathTemplate()
 	if err != nil {
 		plog.Errorf("get handler: %v iRoute url error: %v", handlerName, err)
