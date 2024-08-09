@@ -19,6 +19,8 @@ import (
 	"os"
 	"runtime"
 	"strings"
+
+	"github.com/go-puzzles/plog"
 )
 
 var (
@@ -125,10 +127,8 @@ func (m *RecoveryMiddleware) WrapHandler(handler handlerFunc) handlerFunc {
 				if brokenPipe {
 					err = fmt.Errorf("%s. Headers: %s", recoverErr, headersToStr)
 				} else {
-					err = fmt.Errorf(
-						"[Recovery] %s panic recovered: %s",
-						recoverErr, stack,
-					)
+					err = fmt.Errorf("[Recovery] panic recovered: %s", recoverErr)
+					plog.Errorc(ctx, string(stack))
 				}
 			}
 		}()
