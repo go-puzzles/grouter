@@ -1,7 +1,6 @@
 package prouter
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -44,7 +43,7 @@ type Response interface {
 
 type handlerFunc interface {
 	Name() string
-	Handle(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (Response, error)
+	Handle(ctx *Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (Response, error)
 }
 
 type Router interface {
@@ -67,7 +66,7 @@ type Middleware interface {
 }
 
 func (f HandleFunc) WrapHandler(handler handlerFunc) handlerFunc {
-	return HandleFunc(func(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (Response, error) {
+	return HandleFunc(func(ctx *Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (Response, error) {
 		resp, err := f(ctx, w, r, vars)
 		if err != nil {
 			return resp, err

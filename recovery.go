@@ -10,7 +10,6 @@ package prouter
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -96,7 +95,7 @@ func function(pc uintptr) []byte {
 }
 
 func (m *RecoveryMiddleware) WrapHandler(handler handlerFunc) handlerFunc {
-	return HandleFunc(func(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (resp Response, err error) {
+	return HandleFunc(func(ctx *Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (resp Response, err error) {
 		defer func() {
 			if recoverErr := recover(); recoverErr != nil {
 				// Check for a broken connection, as it is not really a

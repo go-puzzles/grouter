@@ -2,9 +2,11 @@ package prouter
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-puzzles/plog"
 	"github.com/gorilla/mux"
@@ -156,9 +158,42 @@ func (v *Prouter) handelrName(handler handlerFunc) string {
 	return fs[len(fs)-1]
 }
 
+func remoteIP(r *http.Request) string {
+	ip, _, err := net.SplitHostPort(strings.TrimSpace(r.RemoteAddr))
+	if err != nil {
+		return ""
+	}
+	return ip
+}
+
+func clientIP(r *http.Request) string {
+	remoteIP := net.ParseIP(remoteIP(r))
+	if remoteIP == nil {
+		return ""
+	}
+
+	return remoteIP.String()
+}
+
 func (v *Prouter) makeHttpHandler(wr iRoute) http.HandlerFunc {
+	c := plog.With(context.Background(), "handler", wr.Handler().Name())
+
 	return func(w http.ResponseWriter, r *http.Request) {
-		ctx := plog.With(context.Background(), "handler", wr.Handler().Name())
+		path := r.URL.Path
+		raw := r.URL.RawQuery
+		if raw != "" {
+			path = path + "?" + raw
+		}
+
+		ctx := &Context{
+			Context:   c,
+			Request:   r,
+			Writer:    w,
+			Path:      path,
+			Method:    r.Method,
+			ClientIp:  clientIP(r),
+			startTime: time.Now(),
+		}
 		r = r.WithContext(ctx)
 
 		vars := mux.Vars(r)

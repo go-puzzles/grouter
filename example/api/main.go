@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 
@@ -20,12 +19,12 @@ var (
 	myRouters = routers{prouter.NewRoute(http.MethodGet, "/test", prouter.HandleFunc(helloHandler))}
 )
 
-func helloHandler(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (prouter.Response, error) {
+func helloHandler(ctx *prouter.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (prouter.Response, error) {
 	panic("test err")
 	// return prouter.SuccessResponse("hello world"), nil
 }
 
-func testMiddleware(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (prouter.Response, error) {
+func testMiddleware(ctx *prouter.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (prouter.Response, error) {
 	fmt.Println(111)
 	return nil, nil
 }
@@ -38,7 +37,7 @@ type Resp struct {
 	Data string `json:"data"`
 }
 
-func bodyParseTestHandler(ctx context.Context, data *Data) (*string, error) {
+func bodyParseTestHandler(ctx *prouter.Context, data *Data) (*string, error) {
 	fmt.Println("data", data)
 
 	var resp *string

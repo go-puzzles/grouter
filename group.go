@@ -1,7 +1,6 @@
 package prouter
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"net/url"
@@ -92,7 +91,7 @@ func (rg *RouterGroup) Group(prefix string) *RouterGroup {
 }
 
 func (rg *RouterGroup) staticHandler(prefix string, fs http.FileSystem) handlerFunc {
-	return HandleFunc(func(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (Response, error) {
+	return HandleFunc(func(ctx *Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (Response, error) {
 		p := strings.TrimPrefix(r.URL.Path, prefix)
 		rp := strings.TrimPrefix(r.URL.RawPath, prefix)
 

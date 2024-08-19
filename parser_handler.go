@@ -9,7 +9,6 @@
 package prouter
 
 import (
-	"context"
 	"net/http"
 	"strings"
 
@@ -17,9 +16,9 @@ import (
 	"github.com/go-puzzles/plog"
 )
 
-type bodyParseHandlerFn[RequestT any, ResponseT any] func(context.Context, *RequestT) (*ResponseT, error)
+type bodyParseHandlerFn[RequestT any, ResponseT any] func(*Context, RequestT) (ResponseT, error)
 
-func BodyParserHandleFunc[RequestT any, ResponseT any](fn func(context.Context, *RequestT) (*ResponseT, error)) bodyParseHandlerFn[RequestT, ResponseT] {
+func BodyParserHandleFunc[RequestT any, ResponseT any](fn func(*Context, RequestT) (ResponseT, error)) bodyParseHandlerFn[RequestT, ResponseT] {
 	return bodyParseHandlerFn[RequestT, ResponseT](fn)
 }
 
@@ -30,10 +29,9 @@ func (h bodyParseHandlerFn[RequestT, ResponseT]) Name() string {
 	return fs[len(fs)-1]
 }
 
-func (h bodyParseHandlerFn[RequestT, ResponseT]) Handle(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (resp Response, err error) {
+func (h bodyParseHandlerFn[RequestT, ResponseT]) Handle(ctx *Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (resp Response, err error) {
 	ret := &Ret{}
 	requestPtr := new(RequestT)
-	// requestPtr := reflect.New(tml).Interface()
 
 	binder := binding.Default(r.Method, contentType(r))
 	if err = binder.Bind(r, requestPtr); err != nil {
@@ -70,7 +68,7 @@ func (h bodyParseHandlerFn[RequestT, ResponseT]) Handle(ctx context.Context, w h
 		}
 	}
 
-	handleResp, err := h(ctx, requestPtr)
+	handleResp, err := h(ctx, *requestPtr)
 	if err != nil {
 		ret.SetMessage(err.Error())
 		ret.SetCode(http.StatusInternalServerError)
