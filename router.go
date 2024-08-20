@@ -4,6 +4,7 @@ import (
 	"context"
 	"net"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -95,8 +96,8 @@ func New(opts ...RouterOption) *Prouter {
 func NewProuter(opts ...RouterOption) *Prouter {
 	v := New(opts...)
 	v.UseMiddleware(
-		NewRecoveryMiddleware(),
 		NewLogMiddleware(),
+		NewRecoveryMiddleware(),
 	)
 
 	notFoundHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -144,7 +145,8 @@ func (v *Prouter) UseMiddleware(m ...Middleware) {
 
 func (v *Prouter) handleGlobalMiddleware(handler handlerFunc) handlerFunc {
 	h := handler
-	for _, m := range v.middlewares {
+
+	for _, m := range slices.Backward(v.middlewares) {
 		h = m.WrapHandler(h)
 	}
 
@@ -200,11 +202,13 @@ func (v *Prouter) makeHttpHandler(wr iRoute) http.HandlerFunc {
 		if vars == nil {
 			vars = make(map[string]string)
 		}
+		ctx.vars = vars
+		ctx.router = v
 
 		handlerFunc := v.handleGlobalMiddleware(wr.Handler())
 		handlerFunc = wr.handleSpecifyMiddleware(handlerFunc)
 
-		status, resp := v.packResponseTmpl(handlerFunc.Handle(ctx, w, r, vars))
+		status, resp := v.packResponseTmpl(handlerFunc.Handle(ctx))
 
 		_ = WriteJSON(w, status, resp)
 	}

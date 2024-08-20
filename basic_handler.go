@@ -9,13 +9,12 @@
 package prouter
 
 import (
-	"net/http"
 	"strings"
 
 	"github.com/go-puzzles/plog"
 )
 
-type HandleFunc func(ctx *Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (Response, error)
+type HandleFunc func(ctx *Context) (Response, error)
 
 func (f HandleFunc) Name() string {
 	funcName := plog.GetFuncName(f)
@@ -24,6 +23,6 @@ func (f HandleFunc) Name() string {
 	return fs[len(fs)-1]
 }
 
-func (f HandleFunc) Handle(ctx *Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (Response, error) {
-	return f(ctx, w, r, vars)
+func (f HandleFunc) Handle(ctx *Context) (Response, error) {
+	return f(ctx)
 }

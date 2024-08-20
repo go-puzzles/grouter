@@ -10,6 +10,8 @@ package prouter
 
 import (
 	"context"
+	"embed"
+	"html/template"
 	"net/http"
 	"time"
 )
@@ -23,6 +25,9 @@ const (
 
 type Context struct {
 	context.Context
+	router *Prouter
+	vars   map[string]string
+
 	Request    *http.Request
 	Writer     http.ResponseWriter
 	Path       string
@@ -30,9 +35,24 @@ type Context struct {
 	Method     string
 	StatusCode int
 
+	Session *session
+
 	startTime time.Time
 }
 
 func (c *Context) Ctx() context.Context {
 	return c.Context
+}
+
+func (c *Context) ExecuteTemplateFS(fs embed.FS, resource string, data any) {
+	tmpl, err := template.ParseFS(fs, resource)
+	if err != nil {
+		http.Error(c.Writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	err = tmpl.Execute(c.Writer, data)
+	if err != nil {
+		http.Error(c.Writer, err.Error(), http.StatusInternalServerError)
+	}
 }

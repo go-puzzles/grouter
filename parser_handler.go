@@ -29,9 +29,10 @@ func (h bodyParseHandlerFn[RequestT, ResponseT]) Name() string {
 	return fs[len(fs)-1]
 }
 
-func (h bodyParseHandlerFn[RequestT, ResponseT]) Handle(ctx *Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (resp Response, err error) {
+func (h bodyParseHandlerFn[RequestT, ResponseT]) Handle(ctx *Context) (resp Response, err error) {
 	ret := &Ret{}
 	requestPtr := new(RequestT)
+	r := ctx.Request
 
 	binder := binding.Default(r.Method, contentType(r))
 	if err = binder.Bind(r, requestPtr); err != nil {
@@ -40,9 +41,9 @@ func (h bodyParseHandlerFn[RequestT, ResponseT]) Handle(ctx *Context, w http.Res
 		return nil, err
 	}
 
-	if len(vars) > 0 {
+	if len(ctx.vars) > 0 {
 		m := make(map[string][]string)
-		for k, v := range vars {
+		for k, v := range ctx.vars {
 			m[k] = []string{v}
 		}
 		if err = binding.Uri.BindUri(m, requestPtr); err != nil {

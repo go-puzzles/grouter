@@ -91,7 +91,10 @@ func (rg *RouterGroup) Group(prefix string) *RouterGroup {
 }
 
 func (rg *RouterGroup) staticHandler(prefix string, fs http.FileSystem) handlerFunc {
-	return HandleFunc(func(ctx *Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (Response, error) {
+	return HandleFunc(func(ctx *Context) (Response, error) {
+		r := ctx.Request
+		w := ctx.Writer
+
 		p := strings.TrimPrefix(r.URL.Path, prefix)
 		rp := strings.TrimPrefix(r.URL.RawPath, prefix)
 

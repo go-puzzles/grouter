@@ -2,6 +2,7 @@ package prouter
 
 import (
 	"net/http"
+	"slices"
 
 	"github.com/gorilla/mux"
 )
@@ -28,7 +29,7 @@ type RouteOption func(*mux.Route) *mux.Route
 
 func (r *iRoute) handleSpecifyMiddleware(handler handlerFunc) handlerFunc {
 	next := handler
-	for _, m := range r.middleware {
+	for _, m := range slices.Backward(r.middleware) {
 		next = m.WrapHandler(next)
 	}
 
@@ -43,7 +44,7 @@ type Response interface {
 
 type handlerFunc interface {
 	Name() string
-	Handle(ctx *Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (Response, error)
+	Handle(ctx *Context) (Response, error)
 }
 
 type Router interface {
@@ -66,13 +67,13 @@ type Middleware interface {
 }
 
 func (f HandleFunc) WrapHandler(handler handlerFunc) handlerFunc {
-	return HandleFunc(func(ctx *Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (Response, error) {
-		resp, err := f(ctx, w, r, vars)
+	return HandleFunc(func(ctx *Context) (Response, error) {
+		resp, err := f(ctx)
 		if err != nil {
 			return resp, err
 		}
 
-		return handler.Handle(ctx, w, r, vars)
+		return handler.Handle(ctx)
 	})
 }
 

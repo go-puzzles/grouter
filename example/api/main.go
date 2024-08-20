@@ -19,12 +19,12 @@ var (
 	myRouters = routers{prouter.NewRoute(http.MethodGet, "/test", prouter.HandleFunc(helloHandler))}
 )
 
-func helloHandler(ctx *prouter.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (prouter.Response, error) {
+func helloHandler(ctx *prouter.Context) (prouter.Response, error) {
 	panic("test err")
 	// return prouter.SuccessResponse("hello world"), nil
 }
 
-func testMiddleware(ctx *prouter.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (prouter.Response, error) {
+func testMiddleware(ctx *prouter.Context) (prouter.Response, error) {
 	fmt.Println(111)
 	return nil, nil
 }
@@ -43,6 +43,10 @@ func bodyParseTestHandler(ctx *prouter.Context, data *Data) (*string, error) {
 	var resp *string
 	resp = new(string)
 	*resp = fmt.Sprintf("Hello, %s!", data.Name)
+
+	if err := ctx.Session.Set("testsess", "test"); err != nil {
+		return nil, err
+	}
 	return resp, nil
 
 	// return &Resp{Data: fmt.Sprintf("Hello, %s!", data.Name)}, nil
@@ -51,6 +55,7 @@ func bodyParseTestHandler(ctx *prouter.Context, data *Data) (*string, error) {
 func main() {
 	prouter.SetMode(prouter.DebugMode)
 	router := prouter.NewProuter()
+	router.UseMiddleware(prouter.NewSessionMiddleware("testsession"))
 
 	router.HandleRoute(http.MethodGet, "/hello/{name}", prouter.HandleFunc(helloHandler), func(route *mux.Route) *mux.Route {
 		return route.Headers("Content-Type", "application/json", "X-Requested-With", "XMLHttpRequest")

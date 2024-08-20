@@ -100,8 +100,8 @@ func (lm *LogMiddleware) log(ctx *Context, resp Response, err error) {
 }
 
 func (lm *LogMiddleware) WrapHandler(handler handlerFunc) handlerFunc {
-	return HandleFunc(func(ctx *Context, w http.ResponseWriter, r *http.Request, vars map[string]string) (Response, error) {
-		rw := WrapResponseWriter(w)
+	return HandleFunc(func(ctx *Context) (Response, error) {
+		rw := WrapResponseWriter(ctx.Writer)
 
 		var (
 			resp Response
@@ -111,7 +111,7 @@ func (lm *LogMiddleware) WrapHandler(handler handlerFunc) handlerFunc {
 			lm.log(ctx, resp, err)
 		}()
 
-		resp, err = handler.Handle(ctx, rw, r, vars)
+		resp, err = handler.Handle(ctx)
 		if err != nil && rw.StatusCode() == http.StatusOK {
 			rw.WriteHeader(http.StatusInternalServerError)
 		}
