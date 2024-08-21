@@ -1,7 +1,9 @@
 package prouter
 
 import (
+	"embed"
 	"errors"
+	"io/fs"
 	"net/http"
 	"net/url"
 	"path"
@@ -105,9 +107,10 @@ func (rg *RouterGroup) staticHandler(prefix string, fs http.FileSystem) handlerF
 			*r2.URL = *r.URL
 			r2.URL.Path = p
 			r2.URL.RawPath = rp
+
 			http.FileServer(fs).ServeHTTP(w, r2)
 		} else {
-			return ErrorResponse(http.StatusNotFound, "page not found"), errors.New("page not found")
+			return nil, errors.New("page not found")
 		}
 		return nil, nil
 	})
@@ -117,7 +120,20 @@ func (rg *RouterGroup) Static(path, root string, opts ...RouteOption) {
 	rg.StaticFS(path, http.Dir(root), opts...)
 }
 
+func (rg *RouterGroup) StaticFsEmbed(path, fileRelativePath string, fsEmbed embed.FS, opts ...RouteOption) {
+	subFs, err := fs.Sub(fsEmbed, fileRelativePath)
+	if err != nil {
+		panic(err)
+	}
+
+	rg.StaticFS(path, http.FS(subFs))
+}
+
 func (rg *RouterGroup) StaticFS(relativePath string, fs http.FileSystem, opts ...RouteOption) {
+	if !strings.HasPrefix(relativePath, "/") {
+		relativePath = "/" + relativePath
+	}
+
 	urlPattern := path.Join(relativePath, "{filepath}")
 	handler := rg.staticHandler(relativePath, fs)
 	rg.GET(urlPattern, handler, opts...)

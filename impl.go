@@ -3,6 +3,7 @@ package prouter
 import (
 	"net/http"
 	"slices"
+	"strings"
 
 	"github.com/gorilla/mux"
 )
@@ -106,6 +107,10 @@ func (r *defaultRoute) Option(route *mux.Route) *mux.Route {
 }
 
 func NewRoute(method, path string, handler handlerFunc, opts ...RouteOption) Route {
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
+
 	return &defaultRoute{method, path, handler, opts}
 }
 

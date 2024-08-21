@@ -126,7 +126,7 @@ func (v *Prouter) Run(addr string) error {
 func (v *Prouter) initRouter(r iRoute) {
 	f := v.makeHttpHandler(r)
 
-	vr := r.router.Path(r.Path())
+	vr := r.router.PathPrefix(r.Path())
 	if r.Method() != "" {
 		vr = vr.Methods(r.Method())
 	}
@@ -210,11 +210,18 @@ func (v *Prouter) makeHttpHandler(wr iRoute) http.HandlerFunc {
 
 		status, resp := v.packResponseTmpl(handlerFunc.Handle(ctx))
 
+		if status == -1 {
+			return
+		}
 		_ = WriteJSON(w, status, resp)
 	}
 }
 
 func (v *Prouter) packResponseTmpl(resp Response, err error) (status int, ret ResponseTmpl) {
+	if resp == nil && err == nil {
+		return -1, nil
+	}
+
 	var (
 		code int
 		data any

@@ -44,15 +44,16 @@ func (c *Context) Ctx() context.Context {
 	return c.Context
 }
 
-func (c *Context) ExecuteTemplateFS(fs embed.FS, resource string, data any) {
+func (c *Context) ExecuteTemplateFS(fs embed.FS, resource string, data any) (Response, error) {
 	tmpl, err := template.ParseFS(fs, resource)
 	if err != nil {
-		http.Error(c.Writer, err.Error(), http.StatusInternalServerError)
-		return
+		return nil, err
 	}
 
 	err = tmpl.Execute(c.Writer, data)
 	if err != nil {
-		http.Error(c.Writer, err.Error(), http.StatusInternalServerError)
+		return nil, err
 	}
+
+	return nil, nil
 }
