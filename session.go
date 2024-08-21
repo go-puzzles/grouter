@@ -69,6 +69,19 @@ func (s *session) Set(key string, value interface{}) error {
 	return nil
 }
 
+func (s *session) Delete(key string) error {
+	if s == nil {
+		return SessionNotInitialized
+	}
+
+	if _, exists := s.session.Values[key]; !exists {
+		return nil
+	}
+
+	delete(s.session.Values, key)
+	return nil
+}
+
 type SessionMiddleware struct {
 	key   string
 	store sessions.Store
