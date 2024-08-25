@@ -10,8 +10,8 @@ package prouter
 
 import (
 	"strings"
-
-	"github.com/go-puzzles/plog"
+	
+	"github.com/go-puzzles/puzzles/plog"
 )
 
 type HandleFunc func(ctx *Context) (Response, error)
@@ -19,7 +19,7 @@ type HandleFunc func(ctx *Context) (Response, error)
 func (f HandleFunc) Name() string {
 	funcName := plog.GetFuncName(f)
 	fs := strings.Split(funcName, ".")
-
+	
 	return fs[len(fs)-1]
 }
 

@@ -11,9 +11,9 @@ package prouter
 import (
 	"net/http"
 	"strings"
-
+	
 	"github.com/gin-gonic/gin/binding"
-	"github.com/go-puzzles/plog"
+	"github.com/go-puzzles/puzzles/plog"
 )
 
 type bodyParseHandlerFn[RequestT any, ResponseT any] func(*Context, RequestT) (ResponseT, error)
@@ -25,7 +25,7 @@ func BodyParserHandleFunc[RequestT any, ResponseT any](fn func(*Context, Request
 func (h bodyParseHandlerFn[RequestT, ResponseT]) Name() string {
 	funcName := plog.GetFuncName(h)
 	fs := strings.Split(funcName, ".")
-
+	
 	return fs[len(fs)-1]
 }
 
@@ -33,14 +33,14 @@ func (h bodyParseHandlerFn[RequestT, ResponseT]) Handle(ctx *Context) (resp Resp
 	ret := &Ret{}
 	requestPtr := new(RequestT)
 	r := ctx.Request
-
+	
 	binder := binding.Default(r.Method, contentType(r))
 	if err = binder.Bind(r, requestPtr); err != nil {
 		ret.SetMessage("parse request data failed")
 		ret.SetCode(http.StatusBadRequest)
 		return nil, err
 	}
-
+	
 	if len(ctx.vars) > 0 {
 		m := make(map[string][]string)
 		for k, v := range ctx.vars {
@@ -52,7 +52,7 @@ func (h bodyParseHandlerFn[RequestT, ResponseT]) Handle(ctx *Context) (resp Resp
 			return nil, err
 		}
 	}
-
+	
 	if len(r.Header) > 0 {
 		if err = binding.Header.Bind(r, requestPtr); err != nil {
 			ret.SetMessage("parse request header data failed")
@@ -60,7 +60,7 @@ func (h bodyParseHandlerFn[RequestT, ResponseT]) Handle(ctx *Context) (resp Resp
 			return nil, err
 		}
 	}
-
+	
 	if len(r.URL.Query()) > 0 {
 		if err = binding.Query.Bind(r, requestPtr); err != nil {
 			ret.SetMessage("parse request query data failed")
@@ -68,17 +68,17 @@ func (h bodyParseHandlerFn[RequestT, ResponseT]) Handle(ctx *Context) (resp Resp
 			return nil, err
 		}
 	}
-
+	
 	handleResp, err := h(ctx, *requestPtr)
 	if err != nil {
 		ret.SetMessage(err.Error())
 		ret.SetCode(http.StatusInternalServerError)
 		return nil, err
 	}
-
+	
 	ret.SetData(handleResp)
 	ret.SetCode(http.StatusOK)
-
+	
 	return ret, err
 }
 

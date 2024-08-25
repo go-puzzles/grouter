@@ -17,8 +17,8 @@ import (
 	"os"
 	"runtime"
 	"strings"
-
-	"github.com/go-puzzles/plog"
+	
+	"github.com/go-puzzles/puzzles/plog"
 )
 
 var (
@@ -96,7 +96,7 @@ func function(pc uintptr) []byte {
 func (m *RecoveryMiddleware) WrapHandler(handler handlerFunc) handlerFunc {
 	return HandleFunc(func(ctx *Context) (resp Response, err error) {
 		r := ctx.Request
-
+		
 		defer func() {
 			if recoverErr := recover(); recoverErr != nil {
 				// Check for a broken connection, as it is not really a
@@ -112,7 +112,7 @@ func (m *RecoveryMiddleware) WrapHandler(handler handlerFunc) handlerFunc {
 						}
 					}
 				}
-
+				
 				stack := stack(3)
 				httpRequest, _ := httputil.DumpRequest(r, false)
 				headers := strings.Split(string(httpRequest), "\r\n")
@@ -123,7 +123,7 @@ func (m *RecoveryMiddleware) WrapHandler(handler handlerFunc) handlerFunc {
 					}
 				}
 				headersToStr := strings.Join(headers, "\r\n")
-
+				
 				if brokenPipe {
 					err = fmt.Errorf("%s. Headers: %s", recoverErr, headersToStr)
 				} else {
@@ -132,7 +132,7 @@ func (m *RecoveryMiddleware) WrapHandler(handler handlerFunc) handlerFunc {
 				}
 			}
 		}()
-
+		
 		resp, err = handler.Handle(ctx)
 		return
 	})

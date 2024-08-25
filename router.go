@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/go-puzzles/plog"
+	
+	"github.com/go-puzzles/puzzles/plog"
 	"github.com/gorilla/mux"
 )
 
@@ -73,7 +73,7 @@ func (v *Prouter) parseOptions(opts ...RouterOption) {
 	if v.host != "" {
 		v.router = v.router.Host(v.host).Subrouter()
 	}
-
+	
 	if v.scheme != "" {
 		v.router = v.router.Schemes(v.host).Subrouter()
 	}
@@ -81,7 +81,7 @@ func (v *Prouter) parseOptions(opts ...RouterOption) {
 
 func New(opts ...RouterOption) *Prouter {
 	m := mux.NewRouter()
-
+	
 	v := &Prouter{
 		RouterGroup: newGroupWithRouter(m),
 		middlewares: make([]Middleware, 0),
@@ -89,7 +89,7 @@ func New(opts ...RouterOption) *Prouter {
 	v.RouterGroup.root = true
 	v.RouterGroup.prouter = v
 	v.parseOptions(opts...)
-
+	
 	return v
 }
 
@@ -99,7 +99,7 @@ func NewProuter(opts ...RouterOption) *Prouter {
 		NewLogMiddleware(),
 		NewRecoveryMiddleware(),
 	)
-
+	
 	notFoundHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_ = WriteJSON(w, http.StatusNotFound, ErrorResponse(http.StatusNotFound, "page not found"))
 	})
@@ -125,16 +125,16 @@ func (v *Prouter) Run(addr string) error {
 
 func (v *Prouter) initRouter(r iRoute) {
 	f := v.makeHttpHandler(r)
-
+	
 	vr := r.router.PathPrefix(r.Path())
 	if r.Method() != "" {
 		vr = vr.Methods(r.Method())
 	}
-
+	
 	if r.routeOption != nil {
 		vr = r.routeOption(vr)
 	}
-
+	
 	mr := vr.Handler(f)
 	v.debugPrintRoute(r.Method(), mr, r.Handler())
 }
@@ -145,18 +145,18 @@ func (v *Prouter) UseMiddleware(m ...Middleware) {
 
 func (v *Prouter) handleGlobalMiddleware(handler handlerFunc) handlerFunc {
 	h := handler
-
+	
 	for _, m := range slices.Backward(v.middlewares) {
 		h = m.WrapHandler(h)
 	}
-
+	
 	return h
 }
 
 func (v *Prouter) handelrName(handler handlerFunc) string {
 	funcName := plog.GetFuncName(handler)
 	fs := strings.Split(funcName, ".")
-
+	
 	return fs[len(fs)-1]
 }
 
@@ -173,20 +173,20 @@ func clientIP(r *http.Request) string {
 	if remoteIP == nil {
 		return ""
 	}
-
+	
 	return remoteIP.String()
 }
 
 func (v *Prouter) makeHttpHandler(wr iRoute) http.HandlerFunc {
 	c := plog.With(context.Background(), "handler", wr.Handler().Name())
-
+	
 	return func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
 		raw := r.URL.RawQuery
 		if raw != "" {
 			path = path + "?" + raw
 		}
-
+		
 		ctx := &Context{
 			Context:   c,
 			Request:   r,
@@ -197,19 +197,19 @@ func (v *Prouter) makeHttpHandler(wr iRoute) http.HandlerFunc {
 			startTime: time.Now(),
 		}
 		r = r.WithContext(ctx)
-
+		
 		vars := mux.Vars(r)
 		if vars == nil {
 			vars = make(map[string]string)
 		}
 		ctx.vars = vars
 		ctx.router = v
-
+		
 		handlerFunc := v.handleGlobalMiddleware(wr.Handler())
 		handlerFunc = wr.handleSpecifyMiddleware(handlerFunc)
-
+		
 		status, resp := v.packResponseTmpl(handlerFunc.Handle(ctx))
-
+		
 		if status == -1 {
 			return
 		}
@@ -221,45 +221,45 @@ func (v *Prouter) packResponseTmpl(resp Response, err error) (status int, ret Re
 	if resp == nil && err == nil {
 		return -1, nil
 	}
-
+	
 	var (
 		code int
 		data any
 		msg  string
 	)
-
+	
 	data = func() any {
 		if resp == nil {
 			return nil
 		}
-
+		
 		return resp.GetData()
 	}()
-
+	
 	code = func() int {
 		if resp == nil {
 			return 200
 		}
 		return resp.GetCode()
 	}()
-
+	
 	if err != nil {
 		if resp == nil || resp.GetMessage() == "" {
 			msg = err.Error()
 		} else {
 			msg = resp.GetMessage()
 		}
-
+		
 		if code == 0 || code == 200 {
 			code = http.StatusInternalServerError
 		}
 	}
-
+	
 	ret = NewResponseTmpl()
 	ret.SetCode(code)
 	ret.SetMessage(msg)
 	ret.SetData(data)
-
+	
 	return code, ret
 }
 
@@ -270,7 +270,7 @@ func (v *Prouter) debugPrintRoute(method string, route *mux.Route, handler handl
 	if method == "" {
 		method = "ANY"
 	}
-
+	
 	handlerName := handler.Name()
 	url, err := route.GetPathTemplate()
 	if err != nil {
