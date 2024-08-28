@@ -57,3 +57,8 @@ func (c *Context) ExecuteTemplateFS(fs embed.FS, resource string, data any) (Res
 
 	return nil, nil
 }
+
+func (c *Context) Redirect(code int, location string) (Response, error) {
+	http.Redirect(c.Writer, c.Request, location, code)
+	return nil, nil
+}
