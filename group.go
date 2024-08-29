@@ -3,12 +3,14 @@ package prouter
 import (
 	"embed"
 	"errors"
+	"fmt"
 	"io/fs"
 	"net/http"
 	"net/url"
 	"path"
 	"strings"
 
+	"github.com/go-puzzles/plog"
 	"github.com/gorilla/mux"
 )
 
@@ -20,6 +22,7 @@ type RouterGroup struct {
 	routes      []iRoute
 	middlewares []Middleware
 	root        bool
+	paths       []string
 }
 
 func newGroupWithRouter(router *mux.Router) RouterGroup {
@@ -27,6 +30,7 @@ func newGroupWithRouter(router *mux.Router) RouterGroup {
 		router:      router,
 		routes:      make([]iRoute, 0),
 		middlewares: make([]Middleware, 0),
+		paths:       make([]string, 0),
 	}
 }
 
@@ -44,7 +48,7 @@ func (rg *RouterGroup) HandlerRouter(routers ...Router) {
 			default:
 			}
 
-			rg.prouter.initRouter(iRoute{
+			rg.initRouter(iRoute{
 				Route:       r,
 				router:      rg.router,
 				middleware:  rg.middlewares,
@@ -82,13 +86,54 @@ func (rg *RouterGroup) HandleRoute(method, path string, handler handlerFunc, opt
 		r.middleware = rg.middlewares
 	}
 
-	rg.prouter.initRouter(r)
+	rg.initRouter(r)
+}
+
+func (rg *RouterGroup) initRouter(r iRoute) {
+	f := rg.prouter.makeHttpHandler(r)
+
+	vr := r.router.PathPrefix(r.Path())
+	if r.Method() != "" {
+		vr = vr.Methods(r.Method())
+	}
+
+	if r.routeOption != nil {
+		vr = r.routeOption(vr)
+	}
+
+	mr := vr.Handler(f)
+	rg.debugPrintRoute(r.Method(), mr, r.Handler())
+}
+
+func (rg *RouterGroup) debugPrintRoute(method string, route *mux.Route, handler handlerFunc) {
+	if prouterMode != DebugMode {
+		return
+	}
+	if method == "" {
+		method = "ANY"
+	}
+
+	handlerName := handler.Name()
+	url, err := route.GetPathTemplate()
+	if err != nil {
+		plog.Errorf("get handler: %v iRoute url error: %v", handlerName, err)
+	}
+
+	if len(rg.paths) > 0 {
+		url = fmt.Sprintf("/%s%s", strings.Join(rg.paths, "/"), url)
+	}
+	plog.Infof("Method: %-6s Router: %-30s Handler: %s", method, url, handlerName)
 }
 
 func (rg *RouterGroup) Group(prefix string) *RouterGroup {
 	router := rg.router.PathPrefix(prefix).Subrouter()
 	g := newGroupWithRouter(router)
 	g.prouter = rg.prouter
+
+	if strings.HasPrefix(prefix, "/") {
+		prefix = strings.TrimLeft(prefix, "/")
+	}
+	g.paths = append(rg.paths, prefix)
 	return &g
 }
 

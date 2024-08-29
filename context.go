@@ -11,9 +11,12 @@ package prouter
 import (
 	"context"
 	"embed"
+	"fmt"
 	"html/template"
 	"net/http"
 	"time"
+
+	"github.com/go-puzzles/puzzles/plog"
 )
 
 type ContextKeyType int
@@ -35,13 +38,24 @@ type Context struct {
 	Method     string
 	StatusCode int
 
-	Session *session
+	session *session
 
 	startTime time.Time
 }
 
 func (c *Context) Ctx() context.Context {
 	return c.Context
+}
+
+func (c *Context) WithValue(key, val any) {
+	c.Context = context.WithValue(c.Context, key, val)
+}
+
+func (c *Context) Session() *session {
+	if c.session == nil {
+		plog.PanicError(fmt.Errorf("session not initialized"))
+	}
+	return c.session
 }
 
 func (c *Context) ExecuteTemplateFS(fs embed.FS, resource string, data any) (Response, error) {

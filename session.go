@@ -9,6 +9,7 @@
 package prouter
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -17,7 +18,7 @@ import (
 )
 
 const (
-	sessionKey              = "prouter:session"
+	sessionGetterKey        = "prouter:session:getter"
 	defaultSessionSecretKey = "prouter:session-secret-key"
 )
 
@@ -101,6 +102,10 @@ func NewSessionMiddleware(key string, stores ...sessions.Store) *SessionMiddlewa
 	}
 }
 
+func (m *SessionMiddleware) sessionGetter(r *http.Request) (*sessions.Session, error) {
+	return m.store.Get(r, m.key)
+}
+
 func (m *SessionMiddleware) WrapHandler(handler handlerFunc) handlerFunc {
 	return HandleFunc(func(ctx *Context) (resp Response, err error) {
 		s, err := m.store.Get(ctx.Request, m.key)
@@ -114,9 +119,10 @@ func (m *SessionMiddleware) WrapHandler(handler handlerFunc) handlerFunc {
 			r:       ctx.Request,
 			w:       ctx.Writer,
 		}
-		ctx.Session = sess
+		ctx.session = sess
+		ctx.WithValue(sessionGetterKey, m.sessionGetter)
 		defer func() {
-			if newErr := ctx.Session.Save(); newErr != nil {
+			if newErr := ctx.session.Save(); newErr != nil {
 				err = errors.Join(err, newErr)
 				return
 			}
@@ -125,4 +131,12 @@ func (m *SessionMiddleware) WrapHandler(handler handlerFunc) handlerFunc {
 		resp, err = handler.Handle(ctx)
 		return
 	})
+}
+
+func SessionGet(ctx context.Context, r *http.Request) (*sessions.Session, error) {
+	sess, ok := ctx.Value(sessionGetterKey).(*sessions.Session)
+	if !ok {
+		return nil, SessionNotInitialized
+	}
+	return sess, nil
 }
