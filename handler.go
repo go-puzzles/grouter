@@ -45,9 +45,9 @@ func (f HandleFunc) Handle(ctx *Context) (Response, error) {
 	return f(ctx)
 }
 
-type bodyParseHandlerFn[RequestT any, ResponseT any] func(*Context, RequestT) (ResponseT, error)
+type bodyParseHandlerFn[RequestT any, ResponseT any] func(*Context, *RequestT) (*ResponseT, error)
 
-func BodyParserHandleFunc[RequestT any, ResponseT any](fn func(*Context, RequestT) (ResponseT, error)) HandleFunc {
+func BodyParserHandleFunc[RequestT any, ResponseT any](fn func(*Context, *RequestT) (*ResponseT, error)) HandleFunc {
 	return bodyParseHandlerFn[RequestT, ResponseT](fn).Handle
 }
 
@@ -63,7 +63,8 @@ func (h bodyParseHandlerFn[RequestT, ResponseT]) Handle(ctx *Context) (resp Resp
 	requestPtr := new(RequestT)
 	r := ctx.Request
 	
-	binder := binding.Default(r.Method, contentType(r))
+	ct := contentType(r)
+	binder := binding.Default(r.Method, ct)
 	if err = binder.Bind(r, requestPtr); err != nil {
 		ret.SetMessage("parse request data failed")
 		ret.SetCode(http.StatusBadRequest)
@@ -98,7 +99,7 @@ func (h bodyParseHandlerFn[RequestT, ResponseT]) Handle(ctx *Context) (resp Resp
 		}
 	}
 	
-	handleResp, err := h(ctx, *requestPtr)
+	handleResp, err := h(ctx, requestPtr)
 	if err != nil {
 		ret.SetMessage(err.Error())
 		ret.SetCode(http.StatusInternalServerError)

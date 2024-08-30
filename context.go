@@ -15,7 +15,7 @@ import (
 	"html/template"
 	"net/http"
 	"time"
-	
+
 	"github.com/go-puzzles/puzzles/plog"
 )
 
@@ -30,21 +30,25 @@ type Context struct {
 	context.Context
 	router *Prouter
 	vars   map[string]string
-	
+
 	Request    *http.Request
 	Writer     http.ResponseWriter
 	Path       string
 	ClientIp   string
 	Method     string
 	StatusCode int
-	
+
 	session *Session
-	
+
 	startTime time.Time
 }
 
 func (c *Context) Ctx() context.Context {
 	return c.Context
+}
+
+func (c *Context) Var(key string) string {
+	return c.vars[key]
 }
 
 func (c *Context) WithValue(key, val any) {
@@ -63,12 +67,12 @@ func (c *Context) ExecuteTemplateFS(fs embed.FS, resource string, data any) (Res
 	if err != nil {
 		return nil, err
 	}
-	
+
 	err = tmpl.Execute(c.Writer, data)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return nil, nil
 }
 
