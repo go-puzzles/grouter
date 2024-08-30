@@ -9,6 +9,18 @@ var (
 	responseTmpl reflect.Type = reflect.TypeOf((*Ret)(nil)).Elem()
 )
 
+type Response interface {
+	GetCode() int
+	GetMessage() string
+	GetData() any
+}
+
+type ResponseTmpl interface {
+	SetCode(int)
+	SetData(any)
+	SetMessage(string)
+}
+
 func SetResponseTmpl(tmpl ResponseTmpl) {
 	responseTmpl = reflect.TypeOf(tmpl).Elem()
 }

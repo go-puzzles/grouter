@@ -16,10 +16,39 @@ import (
 	"github.com/go-puzzles/puzzles/plog"
 )
 
+type handlerFunc interface {
+	Name() string
+	Handle(ctx *Context) (Response, error)
+}
+
+type HandleFunc func(ctx *Context) (Response, error)
+
+func (f HandleFunc) WrapHandler(handler handlerFunc) handlerFunc {
+	return HandleFunc(func(ctx *Context) (Response, error) {
+		resp, err := f(ctx)
+		if err != nil {
+			return resp, err
+		}
+		
+		return handler.Handle(ctx)
+	})
+}
+
+func (f HandleFunc) Name() string {
+	funcName := plog.GetFuncName(f)
+	fs := strings.Split(funcName, ".")
+	
+	return fs[len(fs)-1]
+}
+
+func (f HandleFunc) Handle(ctx *Context) (Response, error) {
+	return f(ctx)
+}
+
 type bodyParseHandlerFn[RequestT any, ResponseT any] func(*Context, RequestT) (ResponseT, error)
 
-func BodyParserHandleFunc[RequestT any, ResponseT any](fn func(*Context, RequestT) (ResponseT, error)) bodyParseHandlerFn[RequestT, ResponseT] {
-	return bodyParseHandlerFn[RequestT, ResponseT](fn)
+func BodyParserHandleFunc[RequestT any, ResponseT any](fn func(*Context, RequestT) (ResponseT, error)) HandleFunc {
+	return bodyParseHandlerFn[RequestT, ResponseT](fn).Handle
 }
 
 func (h bodyParseHandlerFn[RequestT, ResponseT]) Name() string {
