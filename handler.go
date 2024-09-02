@@ -11,7 +11,7 @@ package prouter
 import (
 	"net/http"
 	"strings"
-	
+
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-puzzles/puzzles/plog"
 	"github.com/pkg/errors"
@@ -30,7 +30,7 @@ func (f HandleFunc) WrapHandler(handler handlerFunc) handlerFunc {
 		if err != nil {
 			return resp, err
 		}
-		
+
 		return handler.Handle(ctx)
 	})
 }
@@ -38,7 +38,7 @@ func (f HandleFunc) WrapHandler(handler handlerFunc) handlerFunc {
 func (f HandleFunc) Name() string {
 	funcName := plog.GetFuncName(f)
 	fs := strings.Split(funcName, ".")
-	
+
 	return fs[len(fs)-1]
 }
 
@@ -55,7 +55,7 @@ func BodyParserHandleFunc[RequestT any, ResponseT any](fn func(*Context, *Reques
 func (h bodyParseHandlerFn[RequestT, ResponseT]) Name() string {
 	funcName := plog.GetFuncName(h)
 	fs := strings.Split(funcName, ".")
-	
+
 	return fs[len(fs)-1]
 }
 
@@ -63,7 +63,7 @@ func (h bodyParseHandlerFn[RequestT, ResponseT]) Handle(ctx *Context) (resp Resp
 	ret := NewResponseTmpl()
 	requestPtr := new(RequestT)
 	r := ctx.Request
-	
+
 	var errMsg string
 	func() {
 		ct := contentType(r)
@@ -81,14 +81,14 @@ func (h bodyParseHandlerFn[RequestT, ResponseT]) Handle(ctx *Context) (resp Resp
 				return
 			}
 		}
-		
+
 		if len(r.Header) > 0 {
 			if err = binding.Header.Bind(r, requestPtr); err != nil {
 				errMsg = "parse request header data failed"
 				return
 			}
 		}
-		
+
 		if len(r.URL.Query()) > 0 {
 			if err = binding.Query.Bind(r, requestPtr); err != nil {
 				errMsg = "parse request query data failed"
@@ -96,27 +96,27 @@ func (h bodyParseHandlerFn[RequestT, ResponseT]) Handle(ctx *Context) (resp Resp
 			}
 		}
 	}()
-	
+
 	if errMsg != "" {
 		return nil, NewErr(http.StatusBadRequest, err, errMsg).
 			SetComponent(ErrProuter).
 			SetResponseType(BadRequest)
 	}
-	
+
 	handleResp, err := h(ctx, requestPtr)
 	if err != nil {
-		var routerErr prouterError
+		routerErr := new(prouterError)
 		if errors.As(err, &routerErr) {
-			return nil, &routerErr
+			return nil, routerErr
 		}
 		return nil, NewErr(http.StatusBadRequest, err).
 			SetComponent(ErrService).
 			SetResponseType(BadRequest)
 	}
-	
+
 	ret.SetData(handleResp)
 	ret.SetCode(http.StatusOK)
-	
+
 	return ret, nil
 }
 

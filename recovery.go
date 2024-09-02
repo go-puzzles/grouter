@@ -17,9 +17,9 @@ import (
 	"os"
 	"runtime"
 	"strings"
-	
+
 	"github.com/pkg/errors"
-	
+
 	"github.com/go-puzzles/puzzles/plog"
 )
 
@@ -98,14 +98,14 @@ func function(pc uintptr) []byte {
 func (m *RecoveryMiddleware) WrapHandler(handler handlerFunc) handlerFunc {
 	return HandleFunc(func(ctx *Context) (resp Response, err error) {
 		r := ctx.Request
-		
+
 		defer func() {
 			if recoverErr := recover(); recoverErr != nil {
 				// Check for a broken connection, as it is not really a
 				// condition that warrants a panic stack trace.
 				var brokenPipe bool
 				if ne, ok := recoverErr.(*net.OpError); ok {
-					var se *os.SyscallError
+					se := new(os.SyscallError)
 					if errors.As(ne, &se) {
 						seStr := strings.ToLower(se.Error())
 						if strings.Contains(seStr, "broken pipe") ||
@@ -114,7 +114,7 @@ func (m *RecoveryMiddleware) WrapHandler(handler handlerFunc) handlerFunc {
 						}
 					}
 				}
-				
+
 				stack := stack(3)
 				httpRequest, _ := httputil.DumpRequest(r, false)
 				headers := strings.Split(string(httpRequest), "\r\n")
@@ -125,7 +125,7 @@ func (m *RecoveryMiddleware) WrapHandler(handler handlerFunc) handlerFunc {
 					}
 				}
 				headersToStr := strings.Join(headers, "\r\n")
-				
+
 				if brokenPipe {
 					err = NewErr(
 						http.StatusInternalServerError,
@@ -140,7 +140,7 @@ func (m *RecoveryMiddleware) WrapHandler(handler handlerFunc) handlerFunc {
 				}
 			}
 		}()
-		
+
 		resp, err = handler.Handle(ctx)
 		return
 	})
