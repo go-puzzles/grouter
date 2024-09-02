@@ -16,6 +16,7 @@ type Response interface {
 }
 
 type ResponseTmpl interface {
+	Response
 	SetCode(int)
 	SetData(any)
 	SetMessage(string)
@@ -59,16 +60,16 @@ func (r *Ret) GetMessage() string {
 	return r.Message
 }
 
-func SuccessResponse(data any) *Ret {
-	return &Ret{
-		Code: http.StatusOK,
-		Data: data,
-	}
+func SuccessResponse(data any) Response {
+	ret := NewResponseTmpl()
+	ret.SetCode(http.StatusOK)
+	ret.SetData(data)
+	return ret
 }
 
-func ErrorResponse(code int, message string) *Ret {
-	return &Ret{
-		Code:    code,
-		Message: message,
-	}
+func ErrorResponse(code int, message string) Response {
+	ret := NewResponseTmpl()
+	ret.SetCode(code)
+	ret.SetMessage(message)
+	return ret
 }

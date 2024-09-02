@@ -59,7 +59,7 @@ func (h bodyParseHandlerFn[RequestT, ResponseT]) Name() string {
 }
 
 func (h bodyParseHandlerFn[RequestT, ResponseT]) Handle(ctx *Context) (resp Response, err error) {
-	ret := &Ret{}
+	ret := NewResponseTmpl()
 	requestPtr := new(RequestT)
 	r := ctx.Request
 	
