@@ -2,12 +2,11 @@ package prouter
 
 import (
 	"errors"
-	"net"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
-
+	
 	"github.com/go-puzzles/puzzles/plog"
 	"github.com/gorilla/mux"
 )
@@ -76,7 +75,7 @@ func (v *Prouter) parseOptions(opts ...RouterOption) {
 	if v.host != "" {
 		v.router = v.router.Host(v.host).Subrouter()
 	}
-
+	
 	if v.scheme != "" {
 		v.router = v.router.Schemes(v.host).Subrouter()
 	}
@@ -84,14 +83,14 @@ func (v *Prouter) parseOptions(opts ...RouterOption) {
 
 func New(opts ...RouterOption) *Prouter {
 	m := mux.NewRouter()
-
+	
 	v := &Prouter{
 		RouterGroup: newGroupWithRouter(m),
 	}
 	v.RouterGroup.root = true
 	v.RouterGroup.prouter = v
 	v.parseOptions(opts...)
-
+	
 	return v
 }
 
@@ -101,7 +100,7 @@ func NewProuter(opts ...RouterOption) *Prouter {
 		NewLogMiddleware(),
 		NewRecoveryMiddleware(),
 	)
-
+	
 	notFoundHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_ = WriteJSON(w, http.StatusNotFound, ErrorResponse(http.StatusNotFound, "page not found"))
 	})
@@ -125,40 +124,23 @@ func (v *Prouter) Run(addr string) error {
 	return srv.ListenAndServe()
 }
 
-func (v *Prouter) handelrName(handler handlerFunc) string {
+func (v *Prouter) handlerName(handler handlerFunc) string {
 	funcName := plog.GetFuncName(handler)
 	fs := strings.Split(funcName, ".")
-
+	
 	return fs[len(fs)-1]
-}
-
-func remoteIP(r *http.Request) string {
-	ip, _, err := net.SplitHostPort(strings.TrimSpace(r.RemoteAddr))
-	if err != nil {
-		return ""
-	}
-	return ip
-}
-
-func clientIP(r *http.Request) string {
-	remoteIP := net.ParseIP(remoteIP(r))
-	if remoteIP == nil {
-		return ""
-	}
-
-	return remoteIP.String()
 }
 
 func (v *Prouter) makeHttpHandler(wr iRoute) http.HandlerFunc {
 	handlerName := wr.Handler().Name()
-
+	
 	return func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
 		raw := r.URL.RawQuery
 		if raw != "" {
 			path = path + "?" + raw
 		}
-
+		
 		ctx := &Context{
 			Context:   plog.With(r.Context(), "handler", handlerName),
 			Request:   r,
@@ -168,21 +150,22 @@ func (v *Prouter) makeHttpHandler(wr iRoute) http.HandlerFunc {
 			ClientIp:  clientIP(r),
 			startTime: time.Now(),
 		}
-
+		
 		vars := mux.Vars(r)
 		if vars == nil {
 			vars = make(map[string]string)
 		}
 		ctx.vars = vars
 		ctx.router = v
-
+		
 		handlerFunc := wr.handleSpecifyMiddleware(wr.Handler())
-
-		status, resp := v.packResponseTmpl(handlerFunc.Handle(ctx))
-
-		if status == -1 {
+		
+		code, resp := v.packResponseTmpl(handlerFunc.Handle(ctx))
+		if code == -1 {
 			return
 		}
+		
+		status := mapCodeToStatus(code)
 		_ = WriteJSON(w, status, resp)
 	}
 }
@@ -191,55 +174,49 @@ func (v *Prouter) packResponseTmpl(resp Response, err error) (status int, ret Re
 	if resp == nil && err == nil {
 		return -1, nil
 	}
-
+	
 	var (
 		code int
 		data any
 		msg  string
 	)
-	code, msg = v.parseError(resp, err)
-
+	
+	// resp == nil indicates that an error was sent on this request
 	data = func() any {
 		if resp == nil {
 			return nil
 		}
-
+		
 		return resp.GetData()
 	}()
-
-	code = func() int {
-		if resp == nil {
-			return 200
-		}
-		return resp.GetCode()
-	}()
-
+	
+	code, msg = v.parseError(resp, err)
+	
 	ret = NewResponseTmpl()
 	ret.SetCode(code)
 	ret.SetMessage(msg)
 	ret.SetData(data)
-
+	
 	return code, ret
 }
 
 func (v *Prouter) parseError(resp Response, err error) (code int, msg string) {
+	if resp != nil {
+		code = resp.GetCode()
+	}
+	
 	if err != nil {
-		var rErr *prouterError
+		rErr := new(prouterError)
 		if errors.As(err, &rErr) {
-			code = rErr.Code()
 			msg = rErr.Message()
-		} else if resp != nil {
-			err = errors.Join(err, errors.New(resp.GetMessage()))
-			code = resp.GetCode()
-			msg = err.Error()
+			code = rErr.Code()
 		} else {
-			code = http.StatusInternalServerError
 			msg = err.Error()
 		}
-	}
-
-	if code == 0 || code == 200 {
-		code = http.StatusInternalServerError
+		
+		if code == 0 {
+			code = http.StatusInternalServerError
+		}
 	}
 	return
 }

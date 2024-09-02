@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"io"
 	"mime"
+	"net"
 	"net/http"
+	"strings"
 	
 	"github.com/pkg/errors"
 )
@@ -65,4 +67,21 @@ func WriteJSON(w http.ResponseWriter, code int, v interface{}) error {
 	enc := json.NewEncoder(w)
 	enc.SetEscapeHTML(false)
 	return enc.Encode(v)
+}
+
+func remoteIP(r *http.Request) string {
+	ip, _, err := net.SplitHostPort(strings.TrimSpace(r.RemoteAddr))
+	if err != nil {
+		return ""
+	}
+	return ip
+}
+
+func clientIP(r *http.Request) string {
+	remoteIP := net.ParseIP(remoteIP(r))
+	if remoteIP == nil {
+		return ""
+	}
+	
+	return remoteIP.String()
 }

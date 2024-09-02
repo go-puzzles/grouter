@@ -14,6 +14,7 @@ import (
 	
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-puzzles/puzzles/plog"
+	"github.com/pkg/errors"
 )
 
 type handlerFunc interface {
@@ -63,53 +64,60 @@ func (h bodyParseHandlerFn[RequestT, ResponseT]) Handle(ctx *Context) (resp Resp
 	requestPtr := new(RequestT)
 	r := ctx.Request
 	
-	ct := contentType(r)
-	binder := binding.Default(r.Method, ct)
-	if err = binder.Bind(r, requestPtr); err != nil {
-		ret.SetMessage("parse request data failed")
-		ret.SetCode(http.StatusBadRequest)
-		return nil, err
-	}
+	var errMsg string
+	func() {
+		ct := contentType(r)
+		binder := binding.Default(r.Method, ct)
+		if err = binder.Bind(r, requestPtr); err != nil {
+			errMsg = "parse request data failed"
+		}
+		if len(ctx.vars) > 0 {
+			m := make(map[string][]string)
+			for k, v := range ctx.vars {
+				m[k] = []string{v}
+			}
+			if err = binding.Uri.BindUri(m, requestPtr); err != nil {
+				errMsg = "parse request data failed"
+				return
+			}
+		}
+		
+		if len(r.Header) > 0 {
+			if err = binding.Header.Bind(r, requestPtr); err != nil {
+				errMsg = "parse request header data failed"
+				return
+			}
+		}
+		
+		if len(r.URL.Query()) > 0 {
+			if err = binding.Query.Bind(r, requestPtr); err != nil {
+				errMsg = "parse request query data failed"
+				return
+			}
+		}
+	}()
 	
-	if len(ctx.vars) > 0 {
-		m := make(map[string][]string)
-		for k, v := range ctx.vars {
-			m[k] = []string{v}
-		}
-		if err = binding.Uri.BindUri(m, requestPtr); err != nil {
-			ret.SetMessage("parse request uri data failed")
-			ret.SetCode(http.StatusBadRequest)
-			return nil, err
-		}
-	}
-	
-	if len(r.Header) > 0 {
-		if err = binding.Header.Bind(r, requestPtr); err != nil {
-			ret.SetMessage("parse request header data failed")
-			ret.SetCode(http.StatusBadRequest)
-			return nil, err
-		}
-	}
-	
-	if len(r.URL.Query()) > 0 {
-		if err = binding.Query.Bind(r, requestPtr); err != nil {
-			ret.SetMessage("parse request query data failed")
-			ret.SetCode(http.StatusBadRequest)
-			return nil, err
-		}
+	if errMsg != "" {
+		return nil, NewErr(http.StatusBadRequest, err, errMsg).
+			SetComponent(ErrProuter).
+			SetResponseType(BadRequest)
 	}
 	
 	handleResp, err := h(ctx, requestPtr)
 	if err != nil {
-		ret.SetMessage(err.Error())
-		ret.SetCode(http.StatusInternalServerError)
-		return nil, err
+		var routerErr prouterError
+		if errors.As(err, &routerErr) {
+			return nil, &routerErr
+		}
+		return nil, NewErr(http.StatusBadRequest, err).
+			SetComponent(ErrService).
+			SetResponseType(BadRequest)
 	}
 	
 	ret.SetData(handleResp)
 	ret.SetCode(http.StatusOK)
 	
-	return ret, err
+	return ret, nil
 }
 
 func contentType(r *http.Request) string {

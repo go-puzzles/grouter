@@ -10,13 +10,15 @@ package prouter
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"net"
+	"net/http"
 	"net/http/httputil"
 	"os"
 	"runtime"
 	"strings"
+	
+	"github.com/pkg/errors"
 	
 	"github.com/go-puzzles/puzzles/plog"
 )
@@ -125,9 +127,15 @@ func (m *RecoveryMiddleware) WrapHandler(handler handlerFunc) handlerFunc {
 				headersToStr := strings.Join(headers, "\r\n")
 				
 				if brokenPipe {
-					err = fmt.Errorf("%s. Headers: %s", recoverErr, headersToStr)
+					err = NewErr(
+						http.StatusInternalServerError,
+						fmt.Errorf("%s. Headers: %s", recoverErr, headersToStr),
+					).SetComponent(ErrRecovery)
 				} else {
-					err = fmt.Errorf("[Recovery] panic recovered: %s", recoverErr)
+					err = NewErr(
+						http.StatusInternalServerError,
+						fmt.Errorf("panic recovered: %s", recoverErr),
+					).SetComponent(ErrRecovery)
 					plog.Errorc(ctx, string(stack))
 				}
 			}

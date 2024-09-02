@@ -10,6 +10,9 @@ var (
 )
 
 type Response interface {
+	SetCode(int) Response
+	SetData(any) Response
+	SetMessage(string) Response
 	GetCode() int
 	GetMessage() string
 	GetData() any
@@ -17,9 +20,6 @@ type Response interface {
 
 type ResponseTmpl interface {
 	Response
-	SetCode(int)
-	SetData(any)
-	SetMessage(string)
 }
 
 func SetResponseTmpl(tmpl ResponseTmpl) {
@@ -30,22 +30,27 @@ func NewResponseTmpl() ResponseTmpl {
 	return reflect.New(responseTmpl).Interface().(ResponseTmpl)
 }
 
+var _ Response = (*Ret)(nil)
+
 type Ret struct {
 	Code    int    `json:"code"`
 	Data    any    `json:"data,omitempty"`
 	Message string `json:"message,omitempty"`
 }
 
-func (r *Ret) SetCode(code int) {
-	r.Code = code
+func (r *Ret) SetCode(i int) Response {
+	r.Code = i
+	return r
 }
 
-func (r *Ret) SetMessage(msg string) {
-	r.Message = msg
+func (r *Ret) SetData(a any) Response {
+	r.Data = a
+	return r
 }
 
-func (r *Ret) SetData(data any) {
-	r.Data = data
+func (r *Ret) SetMessage(s string) Response {
+	r.Message = s
+	return r
 }
 
 func (r *Ret) GetCode() int {
@@ -62,14 +67,12 @@ func (r *Ret) GetMessage() string {
 
 func SuccessResponse(data any) Response {
 	ret := NewResponseTmpl()
-	ret.SetCode(http.StatusOK)
-	ret.SetData(data)
+	ret.SetCode(http.StatusOK).SetData(data)
 	return ret
 }
 
 func ErrorResponse(code int, message string) Response {
 	ret := NewResponseTmpl()
-	ret.SetCode(code)
-	ret.SetMessage(message)
+	ret.SetCode(code).SetMessage(message)
 	return ret
 }
