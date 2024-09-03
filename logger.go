@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
-	
+
 	"github.com/go-puzzles/puzzles/plog"
 	"github.com/go-puzzles/puzzles/plog/log"
 )
@@ -20,7 +20,7 @@ const (
 	magenta = "\033[97;45m"
 	cyan    = "\033[97;46m"
 	reset   = "\033[0m"
-	
+
 	logMsg = "statusCode=%v duration=%v clientIp=%s method=%s path=%s"
 )
 
@@ -55,19 +55,19 @@ func (lm *LogMiddleware) ClientIP(r *http.Request) string {
 	if remoteIP == nil {
 		return ""
 	}
-	
+
 	return remoteIP.String()
 }
 
 func (lm *LogMiddleware) log(ctx *Context, resp Response, err error) {
 	spendTime := time.Since(ctx.startTime)
-	
+
 	status := "success"
 	statusCode := ctx.StatusCode
 	if statusCode != http.StatusOK {
 		status = "failed"
 	}
-	
+
 	var logFunc func(ctx context.Context, msg string, v ...any)
 	switch {
 	case statusCode >= http.StatusOK && statusCode < http.StatusMultipleChoices:
@@ -79,7 +79,7 @@ func (lm *LogMiddleware) log(ctx *Context, resp Response, err error) {
 	default:
 		logFunc = lm.logger.Errorc
 	}
-	
+
 	args := []any{
 		status,
 		"statusCode", statusCode,
@@ -88,21 +88,21 @@ func (lm *LogMiddleware) log(ctx *Context, resp Response, err error) {
 		"method", ctx.Method,
 		"path", ctx.Path,
 	}
-	
+
 	if err != nil {
 		args = append(args, "err", err)
 		if resp != nil {
 			args = append(args, "errMsg", resp.GetMessage())
 		}
 	}
-	
-	logFunc(ctx, "handle route %v.", args...)
+
+	logFunc(ctx, "%v.", args...)
 }
 
 func (lm *LogMiddleware) WrapHandler(handler handlerFunc) handlerFunc {
 	return HandleFunc(func(ctx *Context) (Response, error) {
 		rw := WrapResponseWriter(ctx.Writer)
-		
+
 		var (
 			resp Response
 			err  error
@@ -110,13 +110,13 @@ func (lm *LogMiddleware) WrapHandler(handler handlerFunc) handlerFunc {
 		defer func() {
 			lm.log(ctx, resp, err)
 		}()
-		
+
 		resp, err = handler.Handle(ctx)
 		if err != nil && rw.StatusCode() == http.StatusOK {
 			rw.WriteHeader(http.StatusInternalServerError)
 		}
 		ctx.StatusCode = rw.StatusCode()
-		
+
 		return resp, err
 	})
 }

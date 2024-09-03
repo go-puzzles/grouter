@@ -3,7 +3,7 @@ package prouter
 import (
 	"slices"
 	"strings"
-	
+
 	"github.com/gorilla/mux"
 )
 
@@ -33,7 +33,7 @@ func (r *iRoute) handleSpecifyMiddleware(handler handlerFunc) handlerFunc {
 	for _, m := range slices.Backward(r.middleware) {
 		next = m.WrapHandler(next)
 	}
-	
+
 	return next
 }
 
@@ -41,7 +41,9 @@ type defaultRoute struct {
 	method  string
 	path    string
 	handler handlerFunc
-	opts    []RouteOption
+
+	// it use in HandlerRouter while route is OptRoute
+	opts []RouteOption
 }
 
 func (r *defaultRoute) Handler() handlerFunc {
@@ -61,14 +63,18 @@ func (r *defaultRoute) Option(route *mux.Route) *mux.Route {
 	for _, opt := range r.opts {
 		next = opt(next)
 	}
-	
+
 	return next
 }
 
-func NewRoute(method, path string, handler HandleFunc, opts ...RouteOption) Route {
+func newHandlerFuncRoute(method, path string, handler handlerFunc, opts ...RouteOption) Route {
 	if !strings.HasPrefix(path, "/") {
 		path = "/" + path
 	}
-	
+
 	return &defaultRoute{method, path, handler, opts}
+}
+
+func NewRoute(method, path string, handler HandleFunc, opts ...RouteOption) Route {
+	return newHandlerFuncRoute(method, path, handler, opts...)
 }

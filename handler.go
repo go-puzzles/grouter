@@ -22,6 +22,19 @@ type handlerFunc interface {
 	Handle(ctx *Context) (Response, error)
 }
 
+type wrapHandler struct {
+	name    string
+	handler HandleFunc
+}
+
+func (h *wrapHandler) Name() string {
+	return h.name
+}
+
+func (h *wrapHandler) Handle(ctx *Context) (Response, error) {
+	return h.handler.Handle(ctx)
+}
+
 type HandleFunc func(ctx *Context) (Response, error)
 
 func (f HandleFunc) WrapHandler(handler handlerFunc) handlerFunc {
@@ -48,7 +61,7 @@ func (f HandleFunc) Handle(ctx *Context) (Response, error) {
 
 type bodyParseHandlerFn[RequestT any, ResponseT any] func(*Context, *RequestT) (*ResponseT, error)
 
-func BodyParserHandleFunc[RequestT any, ResponseT any](fn func(*Context, *RequestT) (*ResponseT, error)) HandleFunc {
+func BodyParser[RequestT any, ResponseT any](fn func(*Context, *RequestT) (*ResponseT, error)) HandleFunc {
 	return bodyParseHandlerFn[RequestT, ResponseT](fn).Handle
 }
 
