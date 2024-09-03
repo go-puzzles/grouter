@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	
+
 	"github.com/go-puzzles/puzzles/plog"
 	"github.com/gorilla/mux"
 )
@@ -75,7 +75,7 @@ func (v *Prouter) parseOptions(opts ...RouterOption) {
 	if v.host != "" {
 		v.router = v.router.Host(v.host).Subrouter()
 	}
-	
+
 	if v.scheme != "" {
 		v.router = v.router.Schemes(v.host).Subrouter()
 	}
@@ -83,14 +83,14 @@ func (v *Prouter) parseOptions(opts ...RouterOption) {
 
 func New(opts ...RouterOption) *Prouter {
 	m := mux.NewRouter()
-	
+
 	v := &Prouter{
 		RouterGroup: newGroupWithRouter(m),
 	}
 	v.RouterGroup.root = true
 	v.RouterGroup.prouter = v
 	v.parseOptions(opts...)
-	
+
 	return v
 }
 
@@ -100,7 +100,7 @@ func NewProuter(opts ...RouterOption) *Prouter {
 		NewLogMiddleware(),
 		NewRecoveryMiddleware(),
 	)
-	
+
 	notFoundHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_ = WriteJSON(w, http.StatusNotFound, ErrorResponse(http.StatusNotFound, "page not found"))
 	})
@@ -127,44 +127,44 @@ func (v *Prouter) Run(addr string) error {
 func (v *Prouter) handlerName(handler handlerFunc) string {
 	funcName := plog.GetFuncName(handler)
 	fs := strings.Split(funcName, ".")
-	
+
 	return fs[len(fs)-1]
 }
 
 func (v *Prouter) makeHttpHandler(wr iRoute) http.HandlerFunc {
 	handlerName := wr.Handler().Name()
-	
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
 		raw := r.URL.RawQuery
 		if raw != "" {
 			path = path + "?" + raw
 		}
-		
+
 		ctx := &Context{
 			Context:   plog.With(r.Context(), "handler", handlerName),
 			Request:   r,
-			Writer:    w,
+			Writer:    WrapResponseWriter(w),
 			Path:      path,
 			Method:    r.Method,
 			ClientIp:  clientIP(r),
 			startTime: time.Now(),
 		}
-		
+
 		vars := mux.Vars(r)
 		if vars == nil {
 			vars = make(map[string]string)
 		}
 		ctx.vars = vars
 		ctx.router = v
-		
+
 		handlerFunc := wr.handleSpecifyMiddleware(wr.Handler())
-		
+
 		code, resp := v.packResponseTmpl(handlerFunc.Handle(ctx))
 		if code == -1 {
 			return
 		}
-		
+
 		status := mapCodeToStatus(code)
 		_ = WriteJSON(w, status, resp)
 	}
@@ -174,29 +174,29 @@ func (v *Prouter) packResponseTmpl(resp Response, err error) (status int, ret Re
 	if resp == nil && err == nil {
 		return -1, nil
 	}
-	
+
 	var (
 		code int
 		data any
 		msg  string
 	)
-	
+
 	// resp == nil indicates that an error was sent on this request
 	data = func() any {
 		if resp == nil {
 			return nil
 		}
-		
+
 		return resp.GetData()
 	}()
-	
+
 	code, msg = v.parseError(resp, err)
-	
+
 	ret = NewResponseTmpl()
 	ret.SetCode(code)
 	ret.SetMessage(msg)
 	ret.SetData(data)
-	
+
 	return code, ret
 }
 
@@ -204,7 +204,7 @@ func (v *Prouter) parseError(resp Response, err error) (code int, msg string) {
 	if resp != nil {
 		code = resp.GetCode()
 	}
-	
+
 	if err != nil {
 		rErr := new(prouterError)
 		if errors.As(err, &rErr) {
@@ -213,7 +213,7 @@ func (v *Prouter) parseError(resp Response, err error) (code int, msg string) {
 		} else {
 			msg = err.Error()
 		}
-		
+
 		if code == 0 {
 			code = http.StatusInternalServerError
 		}

@@ -32,7 +32,7 @@ type Context struct {
 	vars   map[string]string
 
 	Request    *http.Request
-	Writer     http.ResponseWriter
+	Writer     *ResponseWriter
 	Path       string
 	ClientIp   string
 	Method     string
@@ -65,12 +65,12 @@ func (c *Context) Session() *Session {
 func (c *Context) ExecuteTemplateFS(fs embed.FS, resource string, data any) (Response, error) {
 	tmpl, err := template.ParseFS(fs, resource)
 	if err != nil {
-		return nil, err
+		return nil, NewErr(http.StatusBadRequest, err).SetComponent(ErrProuter).SetResponseType(BadRequest)
 	}
 
 	err = tmpl.Execute(c.Writer, data)
 	if err != nil {
-		return nil, err
+		return nil, NewErr(http.StatusBadRequest, err).SetComponent(ErrProuter).SetResponseType(BadRequest)
 	}
 
 	return nil, nil

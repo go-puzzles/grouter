@@ -2,13 +2,12 @@ package prouter
 
 import (
 	"embed"
+	"fmt"
 	"io/fs"
 	"net/http"
 	"net/url"
 	"path"
 	"strings"
-
-	"github.com/pkg/errors"
 
 	"github.com/go-puzzles/plog"
 	"github.com/gorilla/mux"
@@ -164,7 +163,7 @@ func (rg *RouterGroup) staticHandler(prefix string, fs http.FileSystem) HandleFu
 
 			http.FileServer(fs).ServeHTTP(w, r2)
 		} else {
-			return nil, errors.New("page not found")
+			return nil, MsgError(http.StatusNotFound, fmt.Sprintf("%v static file not found", p))
 		}
 		return nil, nil
 	}

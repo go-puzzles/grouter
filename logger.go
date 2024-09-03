@@ -101,7 +101,7 @@ func (lm *LogMiddleware) log(ctx *Context, resp Response, err error) {
 
 func (lm *LogMiddleware) WrapHandler(handler handlerFunc) handlerFunc {
 	return HandleFunc(func(ctx *Context) (Response, error) {
-		rw := WrapResponseWriter(ctx.Writer)
+		rw := ctx.Writer
 
 		var (
 			resp Response
