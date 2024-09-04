@@ -13,7 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	
+
 	"github.com/gorilla/sessions"
 )
 
@@ -30,7 +30,7 @@ var (
 type Session struct {
 	key     string
 	session *sessions.Session
-	
+
 	r *http.Request
 	w http.ResponseWriter
 }
@@ -53,7 +53,7 @@ func (s *Session) Get(key string) (interface{}, error) {
 	if s == nil {
 		return nil, SessionNotInitialized
 	}
-	
+
 	val, exists := s.session.Values[key]
 	if !exists {
 		return nil, SessionKeyNotExists
@@ -65,7 +65,7 @@ func (s *Session) Set(key string, value interface{}) error {
 	if s == nil {
 		return SessionNotInitialized
 	}
-	
+
 	s.session.Values[key] = value
 	return nil
 }
@@ -74,11 +74,11 @@ func (s *Session) Delete(key string) error {
 	if s == nil {
 		return SessionNotInitialized
 	}
-	
+
 	if _, exists := s.session.Values[key]; !exists {
 		return nil
 	}
-	
+
 	delete(s.session.Values, key)
 	return nil
 }
@@ -95,7 +95,7 @@ func NewSessionMiddleware(key string, stores ...sessions.Store) *SessionMiddlewa
 	} else {
 		store = stores[0]
 	}
-	
+
 	return &SessionMiddleware{
 		key:   key,
 		store: store,
@@ -107,7 +107,7 @@ func (m *SessionMiddleware) sessionGetter(r *http.Request, w http.ResponseWriter
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &Session{
 		key:     m.key,
 		session: s,
@@ -122,7 +122,7 @@ func (m *SessionMiddleware) WrapHandler(handler handlerFunc) handlerFunc {
 		if err != nil {
 			return nil, err
 		}
-		
+
 		sess := &Session{
 			key:     m.key,
 			session: s,
@@ -137,13 +137,13 @@ func (m *SessionMiddleware) WrapHandler(handler handlerFunc) handlerFunc {
 				return
 			}
 		}()
-		
+
 		resp, err = handler.Handle(ctx)
 		return
 	})
 }
 
-func SessionGet(ctx context.Context, r *http.Request, w http.ResponseWriter) (*Session, error) {
+func SessionGet(ctx context.Context) (*Session, error) {
 	sess, ok := ctx.Value(sessionGetterKey).(*Session)
 	if !ok {
 		return nil, SessionNotInitialized
