@@ -68,7 +68,7 @@ func (r *defaultRoute) Option(route *mux.Route) *mux.Route {
 }
 
 func newHandlerFuncRoute(method, path string, handler handlerFunc, opts ...RouteOption) Route {
-	if !strings.HasPrefix(path, "/") {
+	if path != "" && !strings.HasPrefix(path, "/") {
 		path = "/" + path
 	}
 
