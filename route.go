@@ -42,7 +42,7 @@ type defaultRoute struct {
 	path    string
 	handler handlerFunc
 
-	// it use in HandlerRouter while route is OptRoute
+	// it use in HandleRouter while route is OptRoute
 	opts []RouteOption
 }
 

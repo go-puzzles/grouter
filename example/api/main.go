@@ -82,7 +82,7 @@ func main() {
 	router.GET("/hello/{name}", prouter.BodyParser(parseUriHandler))
 	router.GET("/panic", panicRouterTest)
 	router.GET("/error", errorRouterTest)
-	router.HandlerRouter(myRouters)
+	router.HandleRouter(myRouters)
 	router.Static("/static", "./content")
 
 	group := router.Group("/group1")

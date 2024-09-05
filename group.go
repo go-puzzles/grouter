@@ -43,7 +43,7 @@ func (rg *RouterGroup) UseMiddleware(m ...Middleware) {
 	rg.middlewares = append(rg.middlewares, m...)
 }
 
-func (rg *RouterGroup) HandlerRouter(routers ...Router) {
+func (rg *RouterGroup) HandleRouter(routers ...Router) {
 	wrapRoutes := func(routes []Route) {
 		for _, r := range routes {
 			var opt RouteOption

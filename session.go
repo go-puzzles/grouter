@@ -102,6 +102,8 @@ func NewSessionMiddleware(key string, stores ...sessions.Store) *SessionMiddlewa
 	}
 }
 
+type sessionGetter func(r *http.Request, w http.ResponseWriter) (*Session, error)
+
 func (m *SessionMiddleware) sessionGetter(r *http.Request, w http.ResponseWriter) (*Session, error) {
 	s, err := m.store.Get(r, m.key)
 	if err != nil {
@@ -143,10 +145,10 @@ func (m *SessionMiddleware) WrapHandler(handler handlerFunc) handlerFunc {
 	})
 }
 
-func SessionGet(ctx context.Context) (*Session, error) {
-	sess, ok := ctx.Value(sessionGetterKey).(*Session)
+func SessionGet(ctx context.Context, r *http.Request, w http.ResponseWriter) (*Session, error) {
+	sessGetter, ok := ctx.Value(sessionGetterKey).(sessionGetter)
 	if !ok {
 		return nil, SessionNotInitialized
 	}
-	return sess, nil
+	return sessGetter(r, w)
 }
