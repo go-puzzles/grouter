@@ -73,7 +73,6 @@ func (h bodyParseHandlerFn[RequestT, ResponseT]) Name() string {
 }
 
 func (h bodyParseHandlerFn[RequestT, ResponseT]) Handle(ctx *Context) (resp Response, err error) {
-	ret := NewResponseTmpl()
 	requestPtr := new(RequestT)
 	r := ctx.Request
 
@@ -127,6 +126,11 @@ func (h bodyParseHandlerFn[RequestT, ResponseT]) Handle(ctx *Context) (resp Resp
 			SetResponseType(BadRequest)
 	}
 
+	if handleResp == nil {
+		return nil, nil
+	}
+
+	ret := NewResponseTmpl()
 	ret.SetData(handleResp)
 	ret.SetCode(http.StatusOK)
 

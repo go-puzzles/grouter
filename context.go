@@ -31,12 +31,11 @@ type Context struct {
 	router *Prouter
 	vars   map[string]string
 
-	Request    *http.Request
-	Writer     *ResponseWriter
-	Path       string
-	ClientIp   string
-	Method     string
-	StatusCode int
+	Request  *http.Request
+	Writer   *ResponseWriter
+	Path     string
+	ClientIp string
+	Method   string
 
 	session *Session
 
@@ -53,6 +52,10 @@ func (c *Context) Var(key string) string {
 
 func (c *Context) WithValue(key, val any) {
 	c.Context = context.WithValue(c.Context, key, val)
+}
+
+func (c *Context) Value(key any) any {
+	return c.Context.Value(key)
 }
 
 func (c *Context) Session() *Session {

@@ -62,10 +62,9 @@ func (lm *LogMiddleware) ClientIP(r *http.Request) string {
 func (lm *LogMiddleware) log(ctx *Context, resp Response, err error) {
 	spendTime := time.Since(ctx.startTime)
 
-	status := "success"
-	statusCode := ctx.StatusCode
-	if statusCode != http.StatusOK {
-		status = "failed"
+	statusCode := ctx.Writer.StatusCode()
+	if err != nil && statusCode == http.StatusOK {
+		statusCode = http.StatusInternalServerError
 	}
 
 	var logFunc func(ctx context.Context, msg string, v ...any)
@@ -81,12 +80,11 @@ func (lm *LogMiddleware) log(ctx *Context, resp Response, err error) {
 	}
 
 	args := []any{
-		status,
+		ctx.Path,
 		"statusCode", statusCode,
 		"duration", spendTime,
 		"clientIp", ctx.ClientIp,
 		"method", ctx.Method,
-		"path", ctx.Path,
 	}
 
 	if err != nil {
@@ -96,13 +94,11 @@ func (lm *LogMiddleware) log(ctx *Context, resp Response, err error) {
 		}
 	}
 
-	logFunc(ctx, "%v.", args...)
+	logFunc(ctx, "handle path: %v.", args...)
 }
 
 func (lm *LogMiddleware) WrapHandler(handler handlerFunc) handlerFunc {
 	return HandleFunc(func(ctx *Context) (Response, error) {
-		rw := ctx.Writer
-
 		var (
 			resp Response
 			err  error
@@ -112,10 +108,6 @@ func (lm *LogMiddleware) WrapHandler(handler handlerFunc) handlerFunc {
 		}()
 
 		resp, err = handler.Handle(ctx)
-		if err != nil && rw.StatusCode() == http.StatusOK {
-			rw.WriteHeader(http.StatusInternalServerError)
-		}
-		ctx.StatusCode = rw.StatusCode()
 
 		return resp, err
 	})

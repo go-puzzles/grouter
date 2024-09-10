@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/go-puzzles/puzzles/plog"
 	"github.com/gorilla/sessions"
 )
 
@@ -95,7 +96,6 @@ func NewSessionMiddleware(key string, stores ...sessions.Store) *SessionMiddlewa
 	} else {
 		store = stores[0]
 	}
-
 	return &SessionMiddleware{
 		key:   key,
 		store: store,
@@ -136,6 +136,7 @@ func (m *SessionMiddleware) WrapHandler(handler handlerFunc) handlerFunc {
 		defer func() {
 			if newErr := ctx.session.Save(); newErr != nil {
 				err = errors.Join(err, newErr)
+				plog.Errorf("Save session error: %v", err)
 				return
 			}
 		}()
@@ -146,7 +147,7 @@ func (m *SessionMiddleware) WrapHandler(handler handlerFunc) handlerFunc {
 }
 
 func SessionGet(ctx context.Context, r *http.Request, w http.ResponseWriter) (*Session, error) {
-	sessGetter, ok := ctx.Value(sessionGetterKey).(sessionGetter)
+	sessGetter, ok := ctx.Value(sessionGetterKey).(func(r *http.Request, w http.ResponseWriter) (*Session, error))
 	if !ok {
 		return nil, SessionNotInitialized
 	}

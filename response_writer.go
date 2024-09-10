@@ -11,6 +11,8 @@ func (w *ResponseWriter) WriteHeader(code int) {
 	if code > 0 && w.statusCode != code {
 		w.statusCode = code
 	}
+
+	w.ResponseWriter.WriteHeader(code)
 }
 
 func (w *ResponseWriter) StatusCode() int {

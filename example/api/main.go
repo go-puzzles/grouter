@@ -89,6 +89,14 @@ func main() {
 	group.Use(testMiddleware)
 	group.HandleRoute(http.MethodGet, "/hello2/{name}", helloHandler)
 
+	router.GET("/path", func(ctx *prouter.Context) (prouter.Response, error) {
+		return prouter.SuccessResponse("path test").SetCode(2100), nil
+	})
+
+	router.GET("/path/hello", func(ctx *prouter.Context) (prouter.Response, error) {
+		return prouter.SuccessResponse("path/hello test").SetCode(2100), nil
+	})
+
 	srv := http.Server{
 		Addr:    ":8080",
 		Handler: router,

@@ -100,7 +100,7 @@ func (rg *RouterGroup) HandleRoute(method, path string, handler HandleFunc, opts
 func (rg *RouterGroup) initRouter(r iRoute) {
 	f := rg.prouter.makeHttpHandler(r)
 
-	vr := r.router.PathPrefix(r.Path())
+	vr := r.router.Path(r.Path())
 	if r.Method() != "" {
 		vr = vr.Methods(r.Method())
 	}

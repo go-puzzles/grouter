@@ -143,15 +143,16 @@ func (v *Prouter) makeHttpHandler(wr iRoute) http.HandlerFunc {
 
 		ctx := &Context{
 			Context:   plog.With(r.Context(), "handler", handlerName),
-			Request:   r,
 			Writer:    WrapResponseWriter(w),
 			Path:      path,
 			Method:    r.Method,
 			ClientIp:  clientIP(r),
 			startTime: time.Now(),
 		}
+		r = r.Clone(ctx)
+		ctx.Request = r
 
-		vars := mux.Vars(r)
+		vars := mux.Vars(ctx.Request)
 		if vars == nil {
 			vars = make(map[string]string)
 		}
