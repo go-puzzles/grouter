@@ -69,6 +69,48 @@ func errorRouterTest(ctx *prouter.Context) (prouter.Response, error) {
 	return nil, prouter.NewErr(5112, errors.New("test error"), "this is error message").SetResponseType(prouter.BadRequest)
 }
 
+type SuccessResponse struct {
+	Code int `json:"code"`
+	Data any `json:"data"`
+}
+
+func (s *SuccessResponse) SetCode(code int) prouter.Response {
+	s.Code = code
+	return s
+}
+
+func (s *SuccessResponse) SetData(data any) prouter.Response {
+	s.Data = data
+	return s
+}
+
+func (s *SuccessResponse) SetMessage(_ string) prouter.Response {
+	return s
+}
+
+func (s *SuccessResponse) GetCode() int {
+	return s.Code
+}
+
+func (s *SuccessResponse) GetMessage() string {
+	return "Success"
+}
+
+func (s *SuccessResponse) GetData() any {
+	return s
+}
+
+func (s *SuccessResponse) GetError() error {
+	return nil
+}
+
+func SuccessReturn(data any) *SuccessResponse {
+	return &SuccessResponse{
+		Code: http.StatusOK,
+		Data: data,
+	}
+}
+
 func main() {
 	prouter.SetMode(prouter.DebugMode)
 	router := prouter.NewProuter()
@@ -94,7 +136,8 @@ func main() {
 	})
 
 	router.GET("/path/hello", func(ctx *prouter.Context) (prouter.Response, error) {
-		return prouter.SuccessResponse("path/hello test").SetCode(2100), nil
+		return SuccessReturn("path/hello test"), nil
+		// return prouter.SuccessResponse("path/hello test").SetCode(2100), nil
 	})
 
 	srv := http.Server{

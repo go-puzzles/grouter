@@ -9,7 +9,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/go-puzzles/plog"
+	"github.com/go-puzzles/puzzles/plog"
 	"github.com/gorilla/mux"
 )
 
