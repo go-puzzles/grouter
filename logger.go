@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/go-puzzles/puzzles/plog"
-	"github.com/go-puzzles/puzzles/plog/log"
 )
 
 const (
@@ -38,7 +37,7 @@ func WithLogger(l plog.Logger) LogOption {
 
 func NewLogMiddleware(opts ...LogOption) *LogMiddleware {
 	lm := &LogMiddleware{
-		logger: log.New(),
+		logger: plog.GetLogger(),
 	}
 
 	for _, opt := range opts {
