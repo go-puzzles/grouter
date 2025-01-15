@@ -10,16 +10,17 @@ package sessionstore
 
 import (
 	"bytes"
+	"context"
 	"encoding/gob"
 	"fmt"
 	"net/http"
 	"time"
 
-	"github.com/go-puzzles/predis"
-	"github.com/gomodule/redigo/redis"
+	"github.com/go-puzzles/puzzles/goredis"
 	"github.com/google/uuid"
 	"github.com/gorilla/sessions"
 	"github.com/pkg/errors"
+	"github.com/redis/go-redis/v9"
 )
 
 // SessionSerializer provides an interface for serialize/deserialize a session
@@ -49,13 +50,27 @@ type RedisStore struct {
 	serializer SessionSerializer
 	Options    *sessions.Options
 
-	client *predis.RedisClient
+	client *goredis.PuzzleRedisClient
 	prefix string
 }
 
-func NewRedisStore(pool *redis.Pool, prefix string) *RedisStore {
+func NewRedisStoreWithAddr(addr string, db int, prefix string) *RedisStore {
 	return &RedisStore{
-		client:     predis.NewRedisClient(pool),
+		client:     goredis.NewRedisClient(addr, db),
+		serializer: &GobSerializer{},
+		prefix:     prefix,
+		Options: &sessions.Options{
+			Path:     "/",
+			MaxAge:   86400 * 30,
+			SameSite: http.SameSiteNoneMode,
+			Secure:   true,
+		},
+	}
+}
+
+func NewRedisStoreWithClient(client *goredis.PuzzleRedisClient, prefix string) *RedisStore {
+	return &RedisStore{
+		client:     client,
 		serializer: &GobSerializer{},
 		prefix:     prefix,
 		Options: &sessions.Options{
@@ -92,7 +107,7 @@ func (s *RedisStore) New(r *http.Request, name string) (*sessions.Session, error
 	err = s.load(session)
 	if err == nil {
 		session.IsNew = false
-	} else if errors.Is(err, redis.ErrNil) {
+	} else if errors.Is(err, redis.Nil) {
 		err = nil // no data stored
 	}
 	return session, err
@@ -131,12 +146,13 @@ func (s *RedisStore) save(session *sessions.Session) error {
 		return err
 	}
 
-	return s.client.SetWithTTL(s.Key(session.ID), b, time.Duration(session.Options.MaxAge)*time.Second)
+	return s.client.SetValue(context.Background(), s.Key(session.ID), b, time.Duration(session.Options.MaxAge)*time.Second)
 }
 
 func (s *RedisStore) load(session *sessions.Session) error {
 	var data []byte
-	err := s.client.Get(s.Key(session.ID), &data)
+
+	err := s.client.GetValue(context.Background(), s.Key(session.ID), &data)
 	if err != nil {
 		return errors.Wrap(err, "getRedis")
 	}
@@ -149,7 +165,7 @@ func (s *RedisStore) load(session *sessions.Session) error {
 
 // delete deletes session in Redis
 func (s *RedisStore) delete(session *sessions.Session) error {
-	return s.client.Delete(s.Key(session.ID))
+	return s.client.DeleteValue(context.Background(), s.Key(session.ID))
 }
 
 // generateRandomKey returns a new random key

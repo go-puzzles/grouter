@@ -12,9 +12,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/go-puzzles/predis"
 	"github.com/go-puzzles/prouter"
 	sessionstore "github.com/go-puzzles/prouter/session-store"
+	"github.com/go-puzzles/puzzles/goredis"
 	"github.com/go-puzzles/puzzles/plog"
 	"github.com/pkg/errors"
 )
@@ -32,11 +32,11 @@ func helloHandler(ctx *prouter.Context) (prouter.Response, error) {
 }
 
 func main() {
-	redisConf := &predis.RedisConf{}
+	redisConf := &goredis.RedisConf{}
 	redisConf.SetDefault()
 
-	pool := redisConf.DialRedisPool()
-	redisStore := sessionstore.NewRedisStore(pool, "sesionprefix")
+	client := redisConf.DialRedisClient()
+	redisStore := sessionstore.NewRedisStoreWithClient(client, "sesionprefix")
 
 	router := prouter.NewProuter()
 	router.UseMiddleware(prouter.NewSessionMiddleware("testsession", redisStore))

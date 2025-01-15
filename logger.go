@@ -36,10 +36,16 @@ func WithLogger(l plog.Logger) LogOption {
 	}
 }
 
-func NewLogMiddleware() *LogMiddleware {
-	return &LogMiddleware{
+func NewLogMiddleware(opts ...LogOption) *LogMiddleware {
+	lm := &LogMiddleware{
 		logger: log.New(),
 	}
+
+	for _, opt := range opts {
+		opt(lm)
+	}
+
+	return lm
 }
 
 func (lm *LogMiddleware) RemoteIP(r *http.Request) string {
