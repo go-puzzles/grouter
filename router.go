@@ -133,6 +133,7 @@ func (v *Prouter) handlerName(handler handlerFunc) string {
 
 func (v *Prouter) makeHttpHandler(wr iRoute) http.HandlerFunc {
 	handlerName := wr.Handler().Name()
+	handlerFunc := wr.handleSpecifyMiddleware(wr.Handler())
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
@@ -158,8 +159,6 @@ func (v *Prouter) makeHttpHandler(wr iRoute) http.HandlerFunc {
 		}
 		ctx.vars = vars
 		ctx.router = v
-
-		handlerFunc := wr.handleSpecifyMiddleware(wr.Handler())
 
 		code, resp := v.packResponseTmpl(handlerFunc.Handle(ctx))
 		if code == -1 {

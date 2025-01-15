@@ -137,7 +137,6 @@ func (m *SessionMiddleware) WrapHandler(handler handlerFunc) handlerFunc {
 			if newErr := ctx.session.Save(); newErr != nil {
 				err = errors.Join(err, newErr)
 				plog.Errorf("Save session error: %v", err)
-				return
 			}
 		}()
 
